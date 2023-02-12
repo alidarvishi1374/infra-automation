@@ -1,0 +1,13 @@
+{
+    "repo-1":
+    {
+        "source" : "Azure_repo",
+        "dist" : "gitlab_repo"
+    },
+    "repo-2":
+    {
+        "source" : "Azure_repo",
+        "dist" : "gitlab_repo"
+    }
+
+}
