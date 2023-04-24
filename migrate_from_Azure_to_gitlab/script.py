@@ -37,6 +37,6 @@ for key in data:
     data_2 = data_2.replace(source, dist)
   with open(r'config', 'w') as file:
     file.write(data_2)
-  os.system("git push origin --all")
+  os.system("git push origin --all --force")
   os.chdir("/home")
 
