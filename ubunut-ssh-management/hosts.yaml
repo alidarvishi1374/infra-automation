@@ -1,0 +1,245 @@
+environments:
+  - name: sandbox
+    services:
+      - name: kubernetes
+        nodes:
+          - ip: 10.248.35.154
+            hostname: opkbmfpskst0101
+          - ip: 10.248.35.155
+            hostname: opkbmfpskst0103
+          - ip: 10.248.35.156
+            hostname: opkbmfpskst0105
+          - ip: 10.248.35.27
+            hostname: opkbmfpskst0107
+          - ip: 10.248.35.28
+            hostname: opkbmfpskst0109
+          - ip: 10.248.35.157
+            hostname: opkbwfpskst0101
+          - ip: 10.248.35.158
+            hostname: opkbwfpskst0103
+          - ip: 10.248.35.159
+            hostname: opkbwfpskst0105
+          - ip: 10.248.35.160
+            hostname: opkbwfpskst0107
+          - ip: 10.248.35.161
+            hostname: opkbwfpskst0109
+          - ip: 10.248.35.162
+            hostname: opkbwfpskst0111
+          - ip: 10.248.35.102
+            hostname: opkbwfpskst0113
+          - ip: 10.248.35.103
+            hostname: opkbwfpskst0115
+          - ip: 10.248.35.104
+            hostname: opkbwfpskst0117
+          - ip: 10.248.35.105
+            hostname: opkbwfpskst0119
+          - ip: 10.248.35.106
+            hostname: opkbwfpskst0121
+          - ip: 10.248.35.107
+            hostname: opkbwfpskst0123
+          - ip: 10.248.35.203
+            hostname: opkbwfpskst0125
+      - name: harbor
+        nodes:
+          - ip: 10.248.35.82
+            hostname: opkbhfpsksp0101
+      - name: ceph
+        nodes:
+          - ip: 10.248.35.216
+            hostname: opcmrfpsksa0101
+          - ip: 10.248.35.210
+            hostname: opcpcfpsksa0101
+          - ip: 10.248.35.211
+            hostname: opcpcfpsksa0103
+          - ip: 10.248.35.212
+            hostname: opcpcfpsksa0105
+          - ip: 10.248.35.204
+            hostname: opcpmfpsksa0101
+          - ip: 10.248.35.205
+            hostname: opcpmfpsksa0103
+          - ip: 10.248.35.206
+            hostname: opcpmfpsksa0105
+          - ip: 10.248.35.213
+            hostname: opcrgfpsksa0101
+          - ip: 10.248.35.214
+            hostname: opcrgfpsksa0103
+          - ip: 10.248.35.207
+            hostname: opcsdfpsksa0101
+          - ip: 10.248.35.208
+            hostname: opcsdfpsksa0103
+          - ip: 10.248.35.209
+            hostname: opcsdfpsksa0105
+
+  - name: sandboxapplication
+    services:
+      - name: kubernetes
+        nodes:
+          - ip: 10.248.35.224
+            hostname: opkbmfpsksa0301
+          - ip: 10.248.35.228
+            hostname: opkbwfpsksa0301
+          - ip: 10.248.35.229
+            hostname: opkbwfpsksa0303
+          - ip: 10.248.35.230
+            hostname: opkbwfpsksa0305
+
+  - name: sandbox-dotin
+    services:
+      - name: kubernetes
+        nodes:
+          - ip: 10.248.35.220
+            hostname: opkbmfpsksa0201
+          - ip: 10.248.35.225
+            hostname: opkbwfpsksa0201
+          - ip: 10.248.35.226
+            hostname: opkbwfpsksa0203
+          - ip: 10.248.35.227
+            hostname: opkbwfpsksa0205
+          - ip: 10.248.35.189
+            hostname: opkbwfpsksa0213
+      - name: harbor
+        nodes:
+          - ip: 10.248.35.236
+            hostname: opkbhfpsksa0201
+      - name: ceph
+        nodes:
+          - ip: 10.248.35.240
+            hostname: opcpmfpsksa0201
+          - ip: 10.248.35.241
+            hostname: opcpmfpsksa0203
+          - ip: 10.248.35.242
+            hostname: opcpmfpsksa0205
+
+  - name: pardis
+    services:
+      - name: kubernetes
+        nodes:
+          - ip: 192.168.114.102
+            hostname: opkbmfpspst0101
+          - ip: 192.168.114.103
+            hostname: opkbmfpspst0103
+          - ip: 192.168.114.104
+            hostname: opkbmfpspst0105
+          - ip: 192.168.114.141
+            hostname: opkbmfpspst0107
+          - ip: 192.168.114.143
+            hostname: opkbmfpspst0109
+          - ip: 192.168.114.108
+            hostname: opkbwfpspst0101
+          - ip: 192.168.114.109
+            hostname: opkbwfpspst0103
+          - ip: 192.168.114.110
+            hostname: opkbwfpspst0105
+          - ip: 192.168.114.111
+            hostname: opkbwfpspst0107
+          - ip: 192.168.114.112
+            hostname: opkbwfpspst0109
+          - ip: 192.168.114.113
+            hostname: opkbwfpspst0111
+          - ip: 192.168.114.32
+            hostname: opkbwfpspst0113
+          - ip: 192.168.114.59
+            hostname: opkbwfpspst0115
+          - ip: 192.168.114.31
+            hostname: opkbwfpspst0117
+          - ip: 192.168.114.27
+            hostname: opkbwfpspst0119
+      - name: harbor
+        nodes:
+          - ip: 192.168.112.243
+            hostname: opkbhfpspsp0101
+          - ip: 10.60.110.44
+            hostname: opkbhfpspsp0201
+      - name: ceph
+        nodes:
+          - ip: 192.168.114.157
+            hostname: apcepfpspsp0101
+          - ip: 192.168.114.158
+            hostname: apcepfpspsp0103
+          - ip: 192.168.114.159
+            hostname: apcepfpspsp0105
+          - ip: 192.168.114.238
+            hostname: apcepfpspsp0109
+          - ip: 192.168.114.239
+            hostname: apcepfpspsp0111
+          - ip: 192.168.114.240
+            hostname: apcepfpspsp0107
+
+  - name: iaas
+    services:
+      - name: kubernetes
+        nodes:
+          - ip: 10.248.149.42
+            hostname: kubermaster01
+          - ip: 10.248.149.44
+            hostname: kubermaster02
+          - ip: 10.248.149.43
+            hostname: kubeworker01
+          - ip: 10.248.149.47
+            hostname: kubeworker02
+          - ip: 10.248.149.48
+            hostname: kubeworker03
+          - ip: 10.248.149.135
+            hostname: kubeworker04
+      - name: harbor
+        nodes:
+          - ip: 10.248.149.41
+            hostname: harbor
+      - name: ceph
+        nodes:
+          - ip: 10.248.149.177
+            hostname: ceph-mon-admin
+          - ip: 10.248.149.178
+            hostname: ceph-mon-admin
+          - ip: 10.248.149.179
+            hostname: ceph-mon-admin
+
+  - name: panel-podspace-pardis
+    services:
+      - name: ceph
+        nodes:
+          - ip: 192.168.115.60
+            hostname: apchcfpspsd0201
+
+  - name: ceph-podspace-pardis
+    services:
+      - name: ceph
+        nodes:
+          - ip: 192.168.115.23
+            hostname: apcepfpspst0101
+          - ip: 192.168.115.24
+            hostname: apcepfpspst0103
+          - ip: 192.168.115.25
+            hostname: apcepfpspst0105
+
+  - name: panel-podspace-sandbox
+    services:
+      - name: ceph
+        nodes:
+          - ip: 10.248.35.151
+            hostname: opstpfpsksa0101
+          - ip: 10.248.35.152
+            hostname: opstpfpsksa0103
+
+  - name: ceph-podspace-sandbox
+    services:
+      - name: ceph
+        nodes:
+          - ip: 10.248.35.142
+            hostname: opcpmfpsksa0401
+          - ip: 10.248.35.143
+            hostname: opcpmfpsksa0403
+          - ip: 10.248.35.144
+            hostname: opcpmfpsksa0405
+          - ip: 10.248.35.145
+            hostname: opcsdfpsksa0201
+          - ip: 10.248.35.146
+            hostname: opcsdfpsksa0203
+          - ip: 10.248.35.147
+            hostname: opcsdfpsksa0205
+          - ip: 10.248.35.148
+            hostname: opcsdfpsksa0207
+          - ip: 10.248.35.149
+            hostname: opcsdfpsksa0209
+          - ip: 10.248.35.150
+            hostname: opcsdfpsksa0211
