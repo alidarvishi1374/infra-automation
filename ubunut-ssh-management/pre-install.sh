@@ -10,7 +10,7 @@ python3 -m venv ~/.venv
 source ~/.venv/bin/activate
 
 # install requirements packages
-pip install streamlit streamlit-tags pyyaml
+pip install -r requirements.txt
 
 # run code
 streamlit run app.py
