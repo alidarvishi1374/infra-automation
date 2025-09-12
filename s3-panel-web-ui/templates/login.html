@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>S3 Panel</title>
+    <link rel="icon" type="image/svg" href="{{ url_for('static', filename='img/aws-logo.svg') }}">
+
+    <!-- Custom fonts for this template-->
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+    <!-- Custom styles for this template-->
+    <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+</head>
+
+<body class="bg-gradient-primary">
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-xl-10 col-lg-12 col-md-9">
+            <div class="card o-hidden border-0 shadow-lg my-5">
+                <div class="card-body p-0">
+                    <div class="row">
+                        <!-- ستون تصویر AWS -->
+                        <div class="col-lg-6 d-none d-lg-flex align-items-center justify-content-center bg-light">
+                            <img src="{{ url_for('static', filename='img/aws-s3-icon.png') }}" 
+                                 alt="AWS S3" style="width: 100%; height: auto; max-height: 100%;">
+                        </div>
+
+                        <!-- ستون فرم لاگین -->
+                        <div class="col-lg-6">
+                            <div class="p-5">
+                                <div class="text-center mb-4">
+                                    <h1 class="h4 text-gray-900 mb-4">Welcome Back to S3 Panel!</h1>
+                                </div>
+
+                                <!-- Toast پیام‌ها -->
+                                {% with messages = get_flashed_messages(with_categories=true) %}
+                                {% if messages %}
+                                    {% for category, msg in messages %}
+                                    <div aria-live="polite" aria-atomic="true" 
+                                         style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000;">
+                                        <div class="toast bg-{{ 'danger' if category == 'danger' else 'success' }} text-white" role="alert">
+                                            <div class="toast-header bg-{{ 'danger' if category == 'danger' else 'success' }} text-white">
+                                                <strong class="me-auto">Login {{ category|capitalize }}</strong>
+                                            </div>
+                                            <div class="toast-body">{{ msg }}</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                                {% endwith %}
+
+                                <script>
+                                document.addEventListener("DOMContentLoaded", function() {
+                                    var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+                                    toastElList.forEach(function(toastEl) {
+                                        var toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 3000 });
+                                        toast.show();
+                                    });
+                                });
+                                </script>
+
+                                <!-- فرم لاگین -->
+                                <form class="user" method="POST" action="{{ url_for('login') }}">
+                                    <input type="hidden" name="next" value="{{ next or '' }}">
+                                    <div class="form-group">
+                                        <input type="text" class="form-control form-control-user" name="access_key" placeholder="Access key">
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="password" class="form-control form-control-user" name="secret_key" placeholder="Secret key">
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="text" class="form-control form-control-user" name="endpoint_url" placeholder="Endpoint Url">
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="custom-control custom-checkbox small">
+                                            <input type="checkbox" class="custom-control-input" id="customCheck">
+                                            <label class="custom-control-label" for="customCheck">Remember Me</label>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-user btn-block">
+                                        Login
+                                    </button>
+                                </form>
+
+                            </div>
+                        </div>
+                        <!-- پایان ستون فرم -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap core JavaScript -->
+<script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+
+</body>
+</html>
