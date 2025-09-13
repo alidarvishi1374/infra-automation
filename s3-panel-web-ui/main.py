@@ -242,12 +242,20 @@ def profile():
 @login_required
 def buckets():
     buckets_info = get_buckets_info()
-    return render_template("tables.html", buckets=buckets_info)
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+    endpoint_url = session.get("endpoint_url")
+    user_info = get_user_type(access_key, secret_key, endpoint_url)
+    return render_template("tables.html", buckets=buckets_info, user_info=user_info)
 
 @app.route("/charts")
 @login_required
 def charts():
-    return render_template("charts.html")
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+    endpoint_url = session.get("endpoint_url")
+    user_info = get_user_type(access_key, secret_key, endpoint_url)
+    return render_template("charts.html", user_info=user_info)
 
 @app.route("/tables")
 @login_required
@@ -257,12 +265,20 @@ def tables():
 @app.route("/animation")
 @login_required
 def animation():
-    return render_template("animation.html")
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+    endpoint_url = session.get("endpoint_url")
+    user_info = get_user_type(access_key, secret_key, endpoint_url)
+    return render_template("animation.html", user_info=user_info)
 
 @app.route("/not_found")
 @login_required
 def not_found():
-    return render_template("404.html")
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+    endpoint_url = session.get("endpoint_url")
+    user_info = get_user_type(access_key, secret_key, endpoint_url)
+    return render_template("404.html", user_info=user_info)
 
 @app.route("/home")
 @login_required
@@ -270,7 +286,11 @@ def home():
     buckets_info = get_buckets_info()
     bucket_count = len(buckets_info)
     total_size = sum(bucket["Size"] for bucket in buckets_info) 
-    return render_template("index.html", bucket_count=bucket_count, total_size=total_size)
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+    endpoint_url = session.get("endpoint_url")
+    user_info = get_user_type(access_key, secret_key, endpoint_url)
+    return render_template("index.html", bucket_count=bucket_count, total_size=total_size, user_info=user_info)
 
 @app.route("/logout")
 @login_required
