@@ -60,12 +60,14 @@
                     <span>Buckets</span>
                 </a>
             </li>
+            {% if user_info.type == "Root Account" %}
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('animation') }}">
-                    <i class="fas fa-fw fa-wrench"></i>
-                    <span>Animations</span>
+                <a class="nav-link" href="{{ url_for('iam_users') }}">
+                    <i class="fa fa-key" aria-hidden="true"></i>
+                    <span>IAM</span>
                 </a>
             </li>
+            {% endif %}
             <hr class="sidebar-divider">
             <div class="sidebar-heading">User</div>
             <li class="nav-item active">

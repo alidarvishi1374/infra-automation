@@ -81,8 +81,6 @@ def get_s3_client():
     )
 
 
-
-
 def get_buckets_info():
 
     if session.get("buckets_info"):
@@ -212,6 +210,49 @@ def get_user_type(access_key, secret_key, endpoint_url, region_name=""):
             return {"type": "Unknown", "error": str(e)}
 
 
+def list_iam_users(access_key_id, secret_access_key, endpoint_url, session_token=None):
+    users_info = []
+    try:
+        client = boto3.client(
+            "iam",
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+            aws_session_token=session_token,
+            endpoint_url=endpoint_url,
+            region_name="us-east-1"
+        )
+
+        paginator = client.get_paginator("list_users")
+        for page in paginator.paginate():
+            for u in page.get("Users", []):
+                username = u.get("UserName")
+                arn = u.get("Arn")
+                created = u.get("CreateDate")
+
+                try:
+                    groups_resp = client.list_groups_for_user(UserName=username)
+                    groups = [g["GroupName"] for g in groups_resp.get("Groups", [])]
+                except ClientError:
+                    groups = []
+
+                users_info.append({
+                    "UserName": username,
+                    "Arn": arn,
+                    "Created": str(created),
+                    "Groups": groups if groups else ["No Groups"]
+                })
+
+    except NoCredentialsError:
+        return [{"Error": "Credentials not found or invalid."}]
+    except ClientError as e:
+        return [{"Error": f"AWS client error: {str(e)}"}]
+
+    return users_info
+
+
+
+
+
 @app.route("/profile")
 @login_required
 def profile():
@@ -262,14 +303,18 @@ def charts():
 def tables():
     return redirect(url_for("buckets"))
 
-@app.route("/animation")
+@app.route("/iam_users")
 @login_required
-def animation():
+def iam_users():
     access_key = session.get("access_key")
     secret_key = session.get("secret_key")
     endpoint_url = session.get("endpoint_url")
+
     user_info = get_user_type(access_key, secret_key, endpoint_url)
-    return render_template("animation.html", user_info=user_info)
+    iam_users_list = list_iam_users(access_key, secret_key, endpoint_url)
+
+    return render_template("iam_users.html", user_info=user_info, iam_users=iam_users_list)
+
 
 @app.route("/not_found")
 @login_required
