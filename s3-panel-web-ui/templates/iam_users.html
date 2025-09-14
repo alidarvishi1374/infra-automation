@@ -600,15 +600,22 @@ const row = $(`
             data: { username: username, key_id: keyId, action: action },
             success: function (response) {
                 if (response && response.success) {
-                    // رفرش مجدد کلیدها
                     $(".manage-keys-btn[data-username='" + username + "']").click();
+                    showCustomAlert("Action completed successfully!", "success");
                 } else {
-                    alert(response.message || "Error performing action.");
+                    const msg = response.message || "Failed to perform action!";
+                    showCustomAlert(msg, "danger");
                 }
             },
-            error: function () {
-                alert("Error performing action.");
+            error: function (xhr) {
+                let msg = "Server error occurred!";
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                showCustomAlert(msg, "danger");
             }
+
+
         });
     });
 });
@@ -759,6 +766,8 @@ $(document).ready(function () {
 <div class="modal fade" id="manageKeysModal" tabindex="-1" role="dialog" aria-labelledby="manageKeysModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
     <div class="modal-content shadow-lg border-0 rounded-lg">
+      
+      <!-- Header -->
       <div class="modal-header bg-gradient-primary text-white">
         <h5 class="modal-title font-weight-bold" id="manageKeysModalLabel">
           <i class="fas fa-key"></i> Manage Keys - <span id="modalUsername"></span>
@@ -767,6 +776,8 @@ $(document).ready(function () {
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
+      
+      <!-- Body -->
       <div class="modal-body">
         <div id="keysLoading" class="text-center my-3">
           <i class="fas fa-spinner fa-spin fa-2x"></i> Loading...
@@ -787,13 +798,18 @@ $(document).ready(function () {
           </table>
         </div>
       </div>
-      <div class="modal-footer">
+      
+      <!-- Footer -->
+      <div class="modal-footer d-flex justify-content-between">
+        <button type="button" class="btn btn-success" id="createKeyBtn">
+          <i class="fas fa-plus"></i> Create Key
+        </button>
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
       </div>
+      
     </div>
   </div>
 </div>
-
 
 <script>
 $(document).ready(function () {
@@ -869,6 +885,146 @@ $(document).ready(function () {
     renderTable();
 });
 </script>
+
+<script>
+document.getElementById("createKeyBtn").addEventListener("click", async function() {
+    const username = document.getElementById("modalUsername").innerText;
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
+    try {
+        const res = await fetch("/create-access-key", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username })
+        });
+
+        const data = await res.json();
+
+        const showKeyAlert = (accessKey, secretKey) => {
+            const $alert = $(`
+                <div class="animate__animated animate__fadeInDown shadow rounded"
+                     style="position:fixed; top:20px; left:50%; transform:translateX(-50%);
+                            z-index:2000; min-width:320px; max-width:400px; padding:20px;
+                            background:#1e7e34; color:white; font-family:sans-serif;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>New Access Key Created</strong>
+                        <button type="button" class="close"
+                                style="background:none; border:0; color:white; font-size:1.2rem;">&times;</button>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:5px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="word-break:break-all;">Access Key: ${accessKey}</span>
+                            <button class="btn btn-light btn-sm copyBtn">Copy</button>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:5px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="word-break:break-all;">Secret Key: ${secretKey}</span>
+                            <button class="btn btn-light btn-sm copyBtn">Copy</button>
+                        </div>
+                        <div id="copyMessage" style="text-align:center; margin-top:10px; font-size:0.9rem; opacity:0; transition:opacity 0.3s;">Copied!</div>
+                    </div>
+                </div>
+            `);
+
+            $('body').append($alert);
+
+            $alert.find('.close').on('click', function() {
+                $alert.removeClass('animate__fadeInDown').addClass('animate__fadeOutUp');
+                $alert.one('animationend', () => $alert.remove());
+            });
+
+            $alert.find('.copyBtn').on('click', function() {
+                const textToCopy = $(this).siblings('span').text().split(': ')[1];
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const $msg = $alert.find('#copyMessage');
+                    $msg.css('opacity', '1');
+                    setTimeout(() => $msg.css('opacity', '0'), 1000);
+                });
+            });
+        };
+
+        const showErrorAlert = (msg) => {
+            const $alert = $(`
+                <div class="animate__animated animate__shakeX shadow rounded"
+                     style="position:fixed; top:20px; left:50%; transform:translateX(-50%);
+                            z-index:2000; min-width:300px; max-width:400px; padding:20px;
+                            background:#dc3545; color:white; font-family:sans-serif;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>Error</strong>
+                        <button type="button" class="close"
+                                style="background:none; border:0; color:white; font-size:1.2rem;">&times;</button>
+                    </div>
+                    <div style="margin-top:10px; font-size:0.95rem;">${msg}</div>
+                </div>
+            `);
+
+            $('body').append($alert);
+
+            const timer = setTimeout(() => {
+                $alert.removeClass('animate__shakeX').addClass('animate__fadeOutUp');
+                $alert.one('animationend', () => $alert.remove());
+            }, 3000);
+
+            $alert.find('.close').on('click', function() {
+                clearTimeout(timer);
+                $alert.removeClass('animate__shakeX').addClass('animate__fadeOutUp');
+                $alert.one('animationend', () => $alert.remove());
+            });
+        };
+
+        if (data.success) {
+            const tbody = document.getElementById("keysTableBody");
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${data.AccessKeyId}</td>
+                <td>Active</td>
+                <td>${data.CreateDate}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm disableKeyBtn" data-key="${data.AccessKeyId}">Disable</button>
+                    <button class="btn btn-danger btn-sm deleteKeyBtn" data-key="${data.AccessKeyId}">Delete</button>
+                </td>
+            `;
+            tbody.prepend(row);
+
+            showKeyAlert(data.AccessKeyId, data.SecretAccessKey);
+        } else {
+            showErrorAlert(data.message);
+        }
+
+    } catch (err) {
+        showErrorAlert(err);
+    } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-plus"></i> Create Key';
+    }
+});
+</script>
+
+
+<div id="customAlertContainer" class="position-fixed" style="top:20px; right:20px; z-index:9999; width:300px;">
+</div>
+<script>
+function showCustomAlert(message, type="danger") {
+    const alertBox = $(`
+        <div class="alert alert-${type} alert-dismissible fade show shadow" role="alert">
+            ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    `);
+
+    $("#customAlertContainer").append(alertBox);
+
+    setTimeout(() => {
+        alertBox.alert('close');
+    }, 4000);
+}
+</script>
+
+
+
+
 </body>
 
 </html>

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session,jsonify,request, flash, redirect, url_for
 from helpers.auth import login_required
-from helpers.aws import get_user_type, list_iam_users, create_iam_user, list_access_keys
+from helpers.aws import get_user_type, list_iam_users, create_iam_user, list_access_keys, create_access_key
 
 user_bp = Blueprint("user", __name__)
 
@@ -122,6 +122,7 @@ def get_keys():
     } for k in keys]
     return jsonify(keys=formatted_keys)
 
+
 @user_bp.route("/modify_key", methods=["POST"])
 @login_required
 def modify_key():
@@ -141,13 +142,36 @@ def modify_key():
     try:
         if action == "disable":
             iam.update_access_key(UserName=username, AccessKeyId=key_id, Status="Inactive")
+
         elif action == "enable":
+            keys = iam.list_access_keys(UserName=username).get("AccessKeyMetadata", [])
+            active_keys = [k for k in keys if k["Status"] == "Active"]
+
+            if len(active_keys) >= 2:
+                return jsonify(success=False, message=f"Cannot enable key: user '{username}' already has 2 active keys.")
+
             iam.update_access_key(UserName=username, AccessKeyId=key_id, Status="Active")
+
         elif action == "delete":
             iam.delete_access_key(UserName=username, AccessKeyId=key_id)
+
         else:
             return jsonify(success=False, message="Invalid action")
 
         return jsonify(success=True)
+
     except Exception as e:
         return jsonify(success=False, message=str(e))
+   
+
+@user_bp.route("/create-access-key", methods=["POST"])
+@login_required
+def create_access_key_route():
+    username = request.json.get("username")
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+    endpoint_url = session.get("endpoint_url")
+
+    result = create_access_key(access_key, secret_key, endpoint_url, username)
+    return jsonify(result)
+

@@ -206,14 +206,10 @@ def create_iam_user(endpoint, access_key, secret_key, user_name, region=None):
     try:
         response = iam.create_user(UserName=user_name)
 
-        # access_key_response = iam.create_access_key(UserName=user_name)
-
         return {
             "success": True,
             "message": f"✅ User '{user_name}' created successfully!",
             "user": response.get("User", {}),
-            # "access_key": access_key_response["AccessKey"]["AccessKeyId"],
-            # "secret_key": access_key_response["AccessKey"]["SecretAccessKey"]
         }
 
     except ClientError as e:
