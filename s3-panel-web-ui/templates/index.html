@@ -61,7 +61,7 @@
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('home') }}">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('bucket.home') }}">
                 <div class="sidebar-brand-icon rotate-n-13">
                     <i class="fab fa-aws" style="color: orange;"></i>
                 </div>
@@ -73,7 +73,7 @@
 
             <!-- Nav Item - Dashboard -->
             <li class="nav-item active">
-                <a class="nav-link" href="{{ url_for('home') }}">
+                <a class="nav-link" href="{{ url_for('bucket.home') }}">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
             </li>
@@ -96,7 +96,7 @@
                 <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
                         <h6 class="collapse-header">Buckets:</h6>
-                        <a class="collapse-item" href="{{ url_for('buckets') }}">buckets</a>
+                        <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">buckets</a>
                     </div>
                 </div>
             </li>
@@ -113,7 +113,7 @@
                     data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
                         <h6 class="collapse-header">List Of Users:</h6>
-                        <a class="collapse-item" href="{{ url_for('iam_users') }}">Users</a>
+                        <a class="collapse-item" href="{{ url_for('user.iam_users') }}">Users</a>
                     </div>
                 </div>
             </li>
@@ -137,24 +137,24 @@
                 <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
                         <h6 class="collapse-header">Login Screens:</h6>
-                        <a class="collapse-item" href="{{ url_for('login') }}">Login</a>
+                        <a class="collapse-item" href="{{ url_for('auth.login') }}">Login</a>
                         <div class="collapse-divider"></div>
                         <h6 class="collapse-header">Other Pages:</h6>
-                        <a class="collapse-item" href="{{ url_for('not_found') }}">404 Page</a>
+                        <a class="collapse-item" href="{{ url_for('bucket.not_found') }}">404 Page</a>
                     </div>
                 </div>
             </li>
 
             <!-- Nav Item - Charts -->
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('charts') }}">
+                <a class="nav-link" href="{{ url_for('bucket.charts') }}">
                     <i class="fas fa-fw fa-chart-area"></i>
                     <span>Charts</span></a>
             </li>
 
             <!-- Nav Item - Tables -->
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('tables') }}">
+                <a class="nav-link" href="{{ url_for('bucket.tables') }}">
                     <i class="fas fa-fw fa-table"></i>
                     <span>Tables</span></a>
             </li>
@@ -164,7 +164,7 @@
 
             <div class="sidebar-heading">User</div>
             <li class="nav-item active">
-                <a class="nav-link" href="{{ url_for('profile') }}">
+                <a class="nav-link" href="{{ url_for('user.profile') }}">
                     <i class="fas fa-fw fa-user"></i>
                     <span>Profile</span>
                 </a>
@@ -369,7 +369,7 @@
                             <!-- Dropdown - User Information -->
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                                 aria-labelledby="userDropdown">
-                                <a class="dropdown-item" href="{{ url_for('profile') }}">
+                                <a class="dropdown-item" href="{{ url_for('user.profile') }}">
                                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                     Profile
                                 </a>
@@ -755,7 +755,7 @@
                 <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                    <a class="btn btn-primary" href="{{ url_for('login') }}">Logout</a>
+                    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Logout</a>
                 </div>
             </div>
         </div>

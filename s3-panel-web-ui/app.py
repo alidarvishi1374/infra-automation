@@ -1,0 +1,20 @@
+from flask import Flask
+from routes.auth_routes import auth_bp
+from routes.bucket_routes import bucket_bp
+from routes.user_routes import user_bp
+
+def create_app():
+    app = Flask(__name__)
+    app.secret_key = "super-secret-key"
+
+    # Register Blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(bucket_bp)
+    app.register_blueprint(user_bp)
+
+    return app
+
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run(debug=True)

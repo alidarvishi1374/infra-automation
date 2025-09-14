@@ -1,0 +1,232 @@
+import boto3, json
+from urllib.parse import urlparse
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
+from flask import session
+
+def is_valid_url(url):
+    try:
+        result = urlparse(url)
+        return all([result.scheme in ("http", "https"), result.netloc])
+    except:
+        return False
+
+
+def check_credentials(access_key=None, secret_key=None, endpoint_url=None):
+    if endpoint_url and not is_valid_url(endpoint_url):
+        return False, "Endpoint URL is invalid!, please use http or https"
+
+    try:
+        boto_sess = boto3.Session(
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        ) if access_key and secret_key else boto3.Session()
+
+        s3 = boto_sess.client("s3", endpoint_url=endpoint_url)
+        s3.list_buckets()
+        return True, None
+    except NoCredentialsError:
+        return False, "AWS credentials not found!"
+    except PartialCredentialsError:
+        return False, "Incomplete AWS credentials!"
+    except ClientError as e:
+        msg = e.response.get('Error', {}).get('Message', "Invalid AWS credentials or insufficient permissions.")
+        return False, msg
+    except Exception as e:
+        return False, f"Unexpected error: {str(e)}"
+
+
+def get_s3_client():
+    return boto3.client(
+        "s3",
+        aws_access_key_id=session.get("access_key"),
+        aws_secret_access_key=session.get("secret_key"),
+        endpoint_url=session.get("endpoint_url")
+    )
+
+
+def get_buckets_info():
+    if session.get("buckets_info"):
+        return session["buckets_info"]
+
+    s3_client = get_s3_client()
+    buckets_info = []
+    response = s3_client.list_buckets()
+
+    for bucket in response["Buckets"]:
+        bucket_name = bucket["Name"]
+        total_size = 0
+
+        paginator = s3_client.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket_name):
+            if "Contents" in page:
+                total_size += sum(obj["Size"] for obj in page["Contents"])
+
+        bucket_data = {
+            "Name": bucket_name,
+            "CreationDate": bucket["CreationDate"].isoformat(),
+            "Owner": response.get("Owner", {}).get("ID"),
+            "Size": float(f"{total_size / (1024 * 1024):.3f}")
+        }
+
+        # Region
+        try:
+            location = s3_client.get_bucket_location(Bucket=bucket_name)
+            bucket_data["Region"] = location.get("LocationConstraint")
+        except:
+            bucket_data["Region"] = None
+
+        # Policy
+        try:
+            policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+            bucket_data["Policy"] = json.loads(policy["Policy"])
+        except:
+            bucket_data["Policy"] = None
+
+        # ACL
+        try:
+            acl = s3_client.get_bucket_acl(Bucket=bucket_name)
+            bucket_data["ACL"] = acl["Grants"][0]["Permission"]
+        except:
+            bucket_data["ACL"] = None
+
+        # Tags
+        try:
+            tags = s3_client.get_bucket_tagging(Bucket=bucket_name)
+            bucket_data["Tags"] = tags.get("TagSet", [])
+        except:
+            bucket_data["Tags"] = []
+
+        # Versioning + MFA
+        try:
+            versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
+            bucket_data["Versioning"] = versioning.get("Status") == "Enabled"
+            bucket_data["MFADelete"] = versioning.get("MFADelete") == "Enabled"
+        except:
+            bucket_data["Versioning"] = False
+            bucket_data["MFADelete"] = False
+
+        # Replication
+        try:
+            replication = s3_client.get_bucket_replication(Bucket=bucket_name)
+            bucket_data["Replication"] = bool(replication.get("ReplicationConfiguration", {}).get("Role"))
+        except:
+            bucket_data["Replication"] = False
+
+        # Encryption
+        try:
+            encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
+            bucket_data["Encryption"] = encryption.get("ServerSideEncryptionConfiguration") is not None
+        except:
+            bucket_data["Encryption"] = False
+
+        buckets_info.append(bucket_data)
+
+    session["buckets_info"] = buckets_info
+    return buckets_info
+
+
+def get_user_type(access_key, secret_key, endpoint_url, region_name=""):
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        endpoint_url=endpoint_url,
+        region_name=region_name
+    )
+    try:
+        response = iam_client.get_user()
+        user = response['User']
+        arn = user.get('Arn', '')
+        return {
+            "type": "Root Account" if ":root" in arn else "IAM User",
+            "UserName": user.get('UserName'),
+            "UserId": user.get('UserId'),
+            "Arn": arn,
+            "CreateDate": str(user.get('CreateDate'))
+        }
+    except ClientError as e:
+        code = e.response['Error']['Code']
+        if code == "MethodNotAllowed":
+            return {"type": "System User"}
+        elif code == "AccessDenied":
+            return {"type": "IAM User"}
+        return {"type": "Unknown", "error": str(e)}
+
+
+def list_iam_users(access_key_id, secret_access_key, endpoint_url, session_token=None):
+    users_info = []
+    try:
+        client = boto3.client(
+            "iam",
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+            aws_session_token=session_token,
+            endpoint_url=endpoint_url,
+            region_name="us-east-1"
+        )
+
+        paginator = client.get_paginator("list_users")
+        for page in paginator.paginate():
+            for u in page.get("Users", []):
+                username = u.get("UserName")
+                arn = u.get("Arn")
+                created = u.get("CreateDate")
+
+                try:
+                    groups_resp = client.list_groups_for_user(UserName=username)
+                    groups = [g["GroupName"] for g in groups_resp.get("Groups", [])]
+                except ClientError:
+                    groups = []
+
+                users_info.append({
+                    "UserName": username,
+                    "Arn": arn,
+                    "Created": str(created),
+                    "Groups": groups if groups else ["No Groups"]
+                })
+
+    except NoCredentialsError:
+        return [{"Error": "Credentials not found or invalid."}]
+    except ClientError as e:
+        return [{"Error": f"AWS client error: {str(e)}"}]
+
+    return users_info
+
+from botocore.exceptions import ClientError
+
+def create_iam_user(endpoint, access_key, secret_key, user_name, region=None):
+    session = boto3.session.Session(
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name=region
+    )
+
+    iam = session.client("iam", endpoint_url=endpoint)
+
+    try:
+        response = iam.create_user(UserName=user_name)
+
+        access_key_response = iam.create_access_key(UserName=user_name)
+
+        return {
+            "success": True,
+            "message": f"✅ User '{user_name}' created successfully!",
+            "user": response.get("User", {}),
+            "access_key": access_key_response["AccessKey"]["AccessKeyId"],
+            "secret_key": access_key_response["AccessKey"]["SecretAccessKey"]
+        }
+
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        error_message = e.response["Error"]["Message"]
+
+        return {
+            "success": False,
+            "message": f"❌ {error_code}: {error_message}"
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"❌ Unexpected error: {str(e)}"
+        }

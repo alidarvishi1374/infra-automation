@@ -39,7 +39,7 @@
 
         <!-- Sidebar -->
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('home') }}">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('bucket.home') }}">
                 <div class="sidebar-brand-icon rotate-n-13">
                     <i class="fab fa-aws" style="color: orange;"></i>
                 </div>
@@ -47,7 +47,7 @@
             </a>
             <hr class="sidebar-divider my-0">
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('home') }}">
+                <a class="nav-link" href="{{ url_for('bucket.home') }}">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
@@ -55,14 +55,14 @@
             <hr class="sidebar-divider">
             <div class="sidebar-heading">Interface</div>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('buckets') }}">
+                <a class="nav-link" href="{{ url_for('bucket.buckets') }}">
                     <i class="fas fa-fw fa-table"></i>
                     <span>Buckets</span>
                 </a>
             </li>
             {% if user_info.type == "Root Account" %}
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('iam_users') }}">
+                <a class="nav-link" href="{{ url_for('user.iam_users') }}">
                     <i class="fa fa-key" aria-hidden="true"></i>
                     <span>IAM</span>
                 </a>
@@ -71,7 +71,7 @@
             <hr class="sidebar-divider">
             <div class="sidebar-heading">User</div>
             <li class="nav-item active">
-                <a class="nav-link" href="{{ url_for('profile') }}">
+                <a class="nav-link" href="{{ url_for('user.profile') }}">
                     <i class="fas fa-fw fa-user"></i>
                     <span>Profile</span>
                 </a>
@@ -108,7 +108,7 @@
                             </a>
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                                 aria-labelledby="userDropdown">
-                                <a class="dropdown-item" href="{{ url_for('profile') }}">
+                                <a class="dropdown-item" href="{{ url_for('user.profile') }}">
                                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                     Profile
                                 </a>
@@ -180,7 +180,7 @@
                 <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                    <a class="btn btn-primary" href="{{ url_for('logout') }}">Logout</a>
+                    <a class="btn btn-primary" href="{{ url_for('auth.logout') }}">Logout</a>
                 </div>
             </div>
         </div>
