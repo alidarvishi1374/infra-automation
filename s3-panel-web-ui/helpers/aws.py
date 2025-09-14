@@ -206,14 +206,14 @@ def create_iam_user(endpoint, access_key, secret_key, user_name, region=None):
     try:
         response = iam.create_user(UserName=user_name)
 
-        access_key_response = iam.create_access_key(UserName=user_name)
+        # access_key_response = iam.create_access_key(UserName=user_name)
 
         return {
             "success": True,
             "message": f"✅ User '{user_name}' created successfully!",
             "user": response.get("User", {}),
-            "access_key": access_key_response["AccessKey"]["AccessKeyId"],
-            "secret_key": access_key_response["AccessKey"]["SecretAccessKey"]
+            # "access_key": access_key_response["AccessKey"]["AccessKeyId"],
+            # "secret_key": access_key_response["AccessKey"]["SecretAccessKey"]
         }
 
     except ClientError as e:
@@ -230,3 +230,71 @@ def create_iam_user(endpoint, access_key, secret_key, user_name, region=None):
             "success": False,
             "message": f"❌ Unexpected error: {str(e)}"
         }
+
+def _iam_client(access_key, secret_key, endpoint_url, region="us-east-1"):
+    """Internal helper to create IAM client"""
+    return boto3.client(
+        "iam",
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        endpoint_url=endpoint_url,
+        region_name=region
+    )
+
+def list_access_keys(access_key, secret_key, endpoint_url, username, region="us-east-1"):
+    """List all access keys for a given IAM user"""
+    iam = _iam_client(access_key, secret_key, endpoint_url, region)
+    try:
+        resp = iam.list_access_keys(UserName=username)
+        return {"success": True, "keys": resp.get("AccessKeyMetadata", [])}
+    except ClientError as e:
+        code = e.response["Error"]["Code"]
+        if code == "NoSuchEntity":
+            return {"success": False, "message": f"User '{username}' does not exist."}
+        return {"success": False, "message": str(e)}
+
+def create_access_key(access_key, secret_key, endpoint_url, username, region="us-east-1"):
+    """Create a new access key for IAM user (up to 2 active keys allowed)"""
+    iam = _iam_client(access_key, secret_key, endpoint_url, region)
+    try:
+        # check how many active keys already exist
+        existing = iam.list_access_keys(UserName=username).get("AccessKeyMetadata", [])
+        active_keys = [k for k in existing if k.get("Status") == "Active"]
+
+        if len(active_keys) >= 2:
+            return {
+                "success": False,
+                "message": f"User '{username}' already has 2 active access keys. Please delete or deactivate one first."
+            }
+
+        new_key = iam.create_access_key(UserName=username)
+        return {
+            "success": True,
+            "message": f"Access key created successfully for user '{username}'.",
+            "AccessKeyId": new_key["AccessKey"]["AccessKeyId"],
+            "SecretAccessKey": new_key["AccessKey"]["SecretAccessKey"],
+            "CreateDate": str(new_key["AccessKey"]["CreateDate"])
+        }
+    except ClientError as e:
+        code = e.response["Error"]["Code"]
+        if code == "NoSuchEntity":
+            return {"success": False, "message": f"User '{username}' does not exist."}
+        return {"success": False, "message": str(e)}
+
+def disable_access_key(access_key, secret_key, endpoint_url, username, key_id, region="us-east-1"):
+    """Disable (deactivate) an access key"""
+    iam = _iam_client(access_key, secret_key, endpoint_url, region)
+    try:
+        iam.update_access_key(UserName=username, AccessKeyId=key_id, Status="Inactive")
+        return {"success": True, "message": f"AccessKey '{key_id}' disabled for user '{username}'."}
+    except ClientError as e:
+        return {"success": False, "message": str(e)}
+
+def delete_access_key(access_key, secret_key, endpoint_url, username, key_id, region="us-east-1"):
+    """Delete an access key"""
+    iam = _iam_client(access_key, secret_key, endpoint_url, region)
+    try:
+        iam.delete_access_key(UserName=username, AccessKeyId=key_id)
+        return {"success": True, "message": f"AccessKey '{key_id}' deleted for user '{username}'."}
+    except ClientError as e:
+        return {"success": False, "message": str(e)}
