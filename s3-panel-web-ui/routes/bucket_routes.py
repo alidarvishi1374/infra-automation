@@ -100,3 +100,57 @@ def delete_bucket_route():
 
     except Exception as e:
         return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500
+
+
+@bucket_bp.route("/toggle_versioning", methods=["POST"])
+@login_required
+def toggle_versioning():
+    """
+    Enable or disable versioning for a bucket.
+    Expects JSON: {
+        "bucket_name": "example-bucket",
+        "action": "enable" or "disable"
+    }
+    """
+    data = request.get_json()
+    bucket_name = data.get("bucket_name")
+    action = data.get("action", "").lower()
+
+    if not bucket_name:
+        return jsonify({"success": False, "message": "❌ Bucket name is required."}), 400
+    if action not in ["enable", "disable"]:
+        return jsonify({"success": False, "message": "❌ Action must be 'enable' or 'disable'."}), 400
+
+    s3 = get_s3_client()
+    try:
+        status = "Enabled" if action == "enable" else "Suspended"
+        s3.put_bucket_versioning(
+            Bucket=bucket_name,
+            VersioningConfiguration={"Status": status}
+        )
+        # Refresh cache
+        session.pop("buckets_info", None)
+        return jsonify({
+            "success": True,
+            "message": f"✅ Versioning for bucket '{bucket_name}' set to '{status}'."
+        })
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = e.response.get("Error", {}).get("Message", str(e))
+        return jsonify({
+            "success": False,
+            "message": f"❌ {error_code}: {error_msg}"
+        }), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500
+
+@bucket_bp.route("/api/get_bucket_versioning")
+@login_required
+def get_bucket_versioning():
+    bucket_name = request.args.get("bucket_name")
+    s3 = get_s3_client()
+    try:
+        versioning = s3.get_bucket_versioning(Bucket=bucket_name)
+        return jsonify({"success": True, "versioning_enabled": versioning.get("Status") == "Enabled"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})

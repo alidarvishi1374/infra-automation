@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -695,6 +696,125 @@ $(document).ready(function () {
         $("body").append(alertHtml);
         setTimeout(() => $("#" + alertId).alert("close"), 4000);
     }
+});
+</script>
+
+
+<!-- Edit Bucket Modal -->
+<div class="modal fade" id="editBucketModal" tabindex="-1" role="dialog" aria-labelledby="editBucketModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="editBucketModalLabel"><i class="fas fa-edit"></i> Edit Bucket: <span id="editBucketName"></span></h5>
+        <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="editBucketForm">
+          <div class="form-group row">
+            <label class="col-sm-3 col-form-label">Versioning</label>
+            <div class="col-sm-9">
+              <select class="form-control" id="editVersioning">
+                <option value="Enabled">Enabled</option>
+                <option value="Suspended">Suspended</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <label class="col-sm-3 col-form-label">MFA Delete</label>
+            <div class="col-sm-9">
+              <select class="form-control" id="editMFA">
+                <option value="Enabled">Enabled</option>
+                <option value="Disabled">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <label class="col-sm-3 col-form-label">Replication</label>
+            <div class="col-sm-9">
+              <select class="form-control" id="editReplication">
+                <option value="Enabled">Enabled</option>
+                <option value="Disabled">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Tags (key=value)</label>
+            <input type="text" class="form-control" id="editTags" placeholder="tag1=value1, tag2=value2">
+          </div>
+
+          <div class="form-group">
+            <label>Lifecycle (JSON)</label>
+            <textarea class="form-control" id="editLifecycle" rows="3" placeholder='{"Rules":[...]}'></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Policy (JSON)</label>
+            <textarea class="form-control" id="editPolicy" rows="4" placeholder='{"Statement":[...]}'></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning btn-sm" id="confirmEditBucketBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    // وقتی روی دکمه Edit کلیک شد
+    $(".edit-bucket-btn").click(function () {
+        const bucketName = $(this).data("bucket"); // گرفتن نام باکت از data attribute
+        $("#editBucketName").text(bucketName); // نمایش نام باکت در مودال
+        // میتونی اینجا مقادیر پیش‌فرض بقیه فیلدها رو هم ست کنی اگر داری از سرور میگیری
+        $("#editBucketModal").modal("show"); // باز کردن مودال
+    });
+
+    // وقتی کاربر Save Changes رو زد
+    $("#confirmEditBucketBtn").click(function () {
+        const bucketName = $("#editBucketName").text();
+        const versioning = $("#editVersioning").val();
+        const mfa = $("#editMFA").val();
+        const replication = $("#editReplication").val();
+        const tags = $("#editTags").val();
+        const lifecycle = $("#editLifecycle").val();
+        const policy = $("#editPolicy").val();
+
+        // مثال ارسال به سرور
+        fetch("/edit_bucket", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                bucket_name: bucketName,
+                versioning,
+                mfa,
+                replication,
+                tags,
+                lifecycle,
+                policy
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showCustomAlert(data.message, "success");
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showCustomAlert(data.message, "danger");
+            }
+        })
+        .catch(err => {
+            showCustomAlert("Server error: " + err, "danger");
+        });
+
+        $("#editBucketModal").modal("hide");
+    });
 });
 </script>
 
