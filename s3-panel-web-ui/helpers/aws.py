@@ -322,3 +322,51 @@ def delete_iam_user(endpoint, access_key, secret_key, user_name, region="us-east
             "success": False,
             "message": f"❌ Unexpected error: {str(e)}"
         }
+
+def create_bucket(endpoint, access_key, secret_key, bucket_name, region="us-east-1"):
+    """Create a new S3 bucket with pre-check"""
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        endpoint_url=endpoint,
+        region_name=region
+    )
+    try:
+        try:
+            s3.head_bucket(Bucket=bucket_name)
+            return {
+                "success": False,
+                "message": f"❌ Bucket '{bucket_name}' already exists."
+            }
+        except ClientError as e:
+            if e.response["Error"]["Code"] not in ["404", "NoSuchBucket"]:
+                return {"success": False, "message": f"❌ Pre-check failed: {e}"}
+
+        if region in [None, "", "us-east-1", "default"]:
+            response = s3.create_bucket(Bucket=bucket_name)
+        else:
+            response = s3.create_bucket(
+                Bucket=bucket_name,
+                CreateBucketConfiguration={"LocationConstraint": region}
+            )
+
+        status_code = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if status_code == 200:
+            return {
+                "success": True,
+                "message": f"✅ Bucket '{bucket_name}' created successfully!"
+            }
+        return {
+            "success": False,
+            "message": f"❌ Failed to create bucket '{bucket_name}' (HTTP {status_code})."
+        }
+
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        error_message = e.response["Error"]["Message"]
+        return {"success": False, "message": f"❌ {error_code}: {error_message}"}
+    except Exception as e:
+        return {"success": False, "message": f"❌ Unexpected error: {str(e)}"}
+
+
