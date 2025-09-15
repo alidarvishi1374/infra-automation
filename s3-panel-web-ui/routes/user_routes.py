@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session,jsonify,request, flash, redirect, url_for
 from helpers.auth import login_required
-from helpers.aws import get_user_type, list_iam_users, create_iam_user, list_access_keys, create_access_key
+from helpers.aws import get_user_type, list_iam_users, create_iam_user, list_access_keys, create_access_key, delete_iam_user
+import boto3
 
 user_bp = Blueprint("user", __name__)
 
@@ -175,3 +176,13 @@ def create_access_key_route():
     result = create_access_key(access_key, secret_key, endpoint_url, username)
     return jsonify(result)
 
+@user_bp.route("/delete_user", methods=["POST"])
+@login_required
+def delete_user():
+    user_name = request.json.get("username")
+    endpoint = session.get("endpoint_url")
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+
+    result = delete_iam_user(endpoint, access_key, secret_key, user_name)
+    return jsonify(result)

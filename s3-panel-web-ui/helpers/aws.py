@@ -294,3 +294,31 @@ def delete_access_key(access_key, secret_key, endpoint_url, username, key_id, re
         return {"success": True, "message": f"AccessKey '{key_id}' deleted for user '{username}'."}
     except ClientError as e:
         return {"success": False, "message": str(e)}
+
+def delete_iam_user(endpoint, access_key, secret_key, user_name, region="us-east-1"):
+    """Delete an IAM user"""
+    iam = boto3.client(
+        "iam",
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        endpoint_url=endpoint,
+        region_name=region
+    )
+    try:
+        iam.delete_user(UserName=user_name)
+        return {
+            "success": True,
+            "message": f"✅ User '{user_name}' deleted successfully!"
+        }
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        error_message = e.response["Error"]["Message"]
+        return {
+            "success": False,
+            "message": f"❌ {error_code}: {error_message}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"❌ Unexpected error: {str(e)}"
+        }
