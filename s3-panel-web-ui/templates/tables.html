@@ -464,7 +464,12 @@
                 data-bucket="{{ bucket.Name }}">
             <i class="fas fa-trash"></i> Delete
         </button>
+                        <button class="btn btn-sm btn-action btn-outline-info btn-versioning" 
+                    data-bucket="{{ bucket.Name }}">
+                Toggle Versioning
+            </button>
     </div>
+
 </td>
 
                                     </tr>
@@ -816,6 +821,82 @@ $(document).ready(function () {
         $("#editBucketModal").modal("hide");
     });
 });
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // گرفتن همه دکمه‌های versioning
+    const buttons = document.querySelectorAll(".btn-versioning");
+
+    buttons.forEach(button => {
+        button.addEventListener("click", async function() {
+            const bucketName = this.getAttribute("data-bucket");
+            this.disabled = true; // جلوگیری از کلیک‌های مکرر
+            const originalText = this.innerText;
+            this.innerText = "Processing...";
+
+            try {
+                // ابتدا وضعیت فعلی versioning رو بگیریم
+                const current = await fetch(`/api/get_bucket_versioning?bucket_name=${bucketName}`);
+                const currentData = await current.json();
+
+                if (!currentData.success) {
+                    showCustomAlert("Error fetching versioning status: " + currentData.message, "danger");
+                    this.innerText = originalText;
+                    this.disabled = false;
+                    return;
+                }
+
+                const action = currentData.versioning_enabled ? "disable" : "enable";
+
+                // درخواست فعال/غیرفعال کردن versioning
+                const response = await fetch("/toggle_versioning", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        bucket_name: bucketName,
+                        action: action
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const statusText = action === "enable" ? "Enabled" : "Disabled";
+                    this.innerText = `Versioning ${statusText}`;
+                    showCustomAlert(`Versioning for bucket "${bucketName}" is now ${statusText}.`, "success");
+                    // میتونی ریفرش هم بزاری اگر لازم باشه
+                    setTimeout(() => { location.reload(); }, 1000);
+                } else {
+                    showCustomAlert("Error: " + data.message, "danger");
+                    this.innerText = originalText;
+                }
+            } catch (err) {
+                showCustomAlert("Unexpected error: " + err, "danger");
+                this.innerText = originalText;
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+});
+
+// استفاده از همان فانکشن آلرت زیبا
+function showCustomAlert(message, type="info") {
+    const alertId = "alert-" + Date.now();
+    const alertHtml = `
+        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
+          ${message}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+             <span aria-hidden="true">&times;</span>
+          </button>
+        </div>`;
+    $("body").append(alertHtml);
+    setTimeout(() => $("#" + alertId).alert("close"), 4000);
+}
 </script>
 
 
