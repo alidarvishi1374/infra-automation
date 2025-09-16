@@ -26,6 +26,52 @@
     <!-- Custom styles for this page -->
     <link href="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
 
+    <style>
+    /* جدول باکت‌ها */
+    #dataTable, #dataTable td {
+        font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+        font-size: 16px;
+        font-weight: 500;
+        color: #212529;
+    }
+
+    /* Header جدول */
+    #dataTable thead {
+        background: linear-gradient(to right, #4eb8df, #36c1d3);
+        color: white;
+        font-weight: 600;
+    }
+
+    /* Hover روی ردیف‌ها */
+    #dataTable tbody tr:hover {
+        background-color: #e0f7fa;
+    }
+
+    /* Footer جدول */
+    #dataTable tfoot {
+        background-color: #ffe082;
+        font-weight: bold;
+    }
+
+    /* دکمه‌ها */
+    .btn-action {
+        margin: 2px;
+    }
+
+    /* جدول تگ‌ها */
+    #tagsTable {
+        font-size: 14px;
+    }
+    #tagsTable thead {
+        background-color: #ffca28;
+        color: white;
+        font-weight: 600;
+    }
+    #tagsTable tbody tr:hover {
+        background-color: #fff8e1;
+    }
+</style>
+
 </head>
 <style>
     #dataTable, 
@@ -424,6 +470,7 @@
                                             <th>Region</th>
                                             <th>CreationDate</th>
                                             <th>Policy</th>
+                                            <th>Lifecycle</th>
                                             <th>ACL</th>
                                             <th>Tags</th>
                                             <th>Versioning</th>
@@ -444,7 +491,13 @@
                                         <td>{{ bucket.Name }}</td>
                                         <td>{{ bucket.Region }}</td>
                                         <td>{{ bucket.CreationDate }}</td>
-                                        <td>{{ bucket.Policy }}</td>
+                                        <td>{% if bucket.Lifecycle %}<pre>{{ bucket.Policy | tojson(indent=2) }}</pre>{% else %}No Policy{% endif %}</td><td>
+{% if bucket.Lifecycle %}
+    <pre>{{ bucket.Lifecycle | tojson(indent=2) }}</pre>
+{% else %}
+    No Lifecycle
+{% endif %}
+</td>
                                         <td>{{ bucket.ACL }}</td>
                                         <td>{{ bucket.Tags }}</td>
                                         <td>{{ bucket.Versioning }}</td>
@@ -471,6 +524,10 @@
         data-bucket="{{ bucket.Name }}">
         <i class="fas fa-tags"></i> Tags
 </button>
+
+<button class="btn btn-info policy-btn" data-bucket="{{ bucket.Name }}">Policy</button>
+<button class="btn btn-warning lifecycle-btn" data-bucket="{{ bucket.Name }}">Lifecycle</button>
+
 
 
     </div>
@@ -960,6 +1017,330 @@ $(document).ready(function () {
     });
 });
 </script>
+
+<div class="modal fade" id="bucketPolicyModal" tabindex="-1" role="dialog" aria-labelledby="bucketPolicyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">Policy for <span id="policyBucketName"></span></h5>
+        <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- نمایش پالیسی -->
+        <pre id="policyContent" class="bg-light p-2 rounded" style="max-height:400px; overflow:auto;"></pre>
+        <!-- ادیت پالیسی (اول مخفی) -->
+        <textarea id="policyEditor" class="form-control" style="display:none; height:300px; font-family: monospace;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="editPolicyBtn" class="btn btn-warning">Edit</button>
+        <button id="savePolicyBtn" class="btn btn-success" style="display:none;">Save</button>
+        <button id="deletePolicyBtn" class="btn btn-danger">Delete</button>
+        <button class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function(){
+    let currentPolicyBucket = null;
+    let currentPolicyRaw = null;
+
+    // باز کردن مودال و لود پالیسی
+    $(".policy-btn").click(function(){
+        currentPolicyBucket = $(this).data("bucket");
+        $("#policyBucketName").text(currentPolicyBucket);
+        $("#policyContent").text("Loading...");
+        $("#policyEditor").hide();
+        $("#savePolicyBtn").hide();
+        $("#editPolicyBtn").show();
+        $("#bucketPolicyModal").modal("show");
+
+        // لود پالیسی از سرور
+        fetch(`/get_bucket_policies?bucket_name=${currentPolicyBucket}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.success && data.policies && data.policies.length > 0){
+                    currentPolicyRaw = data.policies[0];
+                    $("#policyContent").text(JSON.stringify(JSON.parse(currentPolicyRaw), null, 2));
+                } else {
+                    currentPolicyRaw = null;
+                    $("#policyContent").text("No policy found.");
+                }
+            })
+            .catch(err => {
+                showCustomAlert("Error loading policy: " + err, "danger");
+            });
+    });
+
+    // وقتی دکمه حذف کلیک شد → مودال تایید باز بشه
+    $("#deletePolicyBtn").click(function(){
+        if(!currentPolicyBucket) {
+            showCustomAlert("Bucket not selected!", "warning");
+            return;
+        }
+        $("#deletePolicyBucketName").text(currentPolicyBucket);
+        $("#deletePolicyConfirmModal").modal("show");
+    });
+
+    // تایید حذف از داخل مودال
+    $("#confirmDeletePolicyBtn").click(function(){
+        fetch("/delete_bucket_policy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bucket_name: currentPolicyBucket })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                showCustomAlert(data.message, "success");
+                $("#bucketPolicyModal").modal("hide");
+                $("#deletePolicyConfirmModal").modal("hide");
+            } else {
+                showCustomAlert(data.message, "danger");
+            }
+        })
+        .catch(err => showCustomAlert("Server error: " + err, "danger"));
+    });
+
+    // ادیت یا ساخت پالیسی
+    $("#editPolicyBtn").click(function(){
+        $("#policyContent").hide();
+        $("#editPolicyBtn").hide();
+
+        if(currentPolicyRaw){
+            // اگه پالیسی داریم → همونو نشون بده
+            $("#policyEditor").val(JSON.stringify(JSON.parse(currentPolicyRaw), null, 2)).show();
+        } else {
+            // اگه پالیسی نداریم → یه اسکلت خالی بذار
+            $("#policyEditor").val(`{
+  "Version": "2012-10-17",
+  "Statement": []
+}`).show();
+        }
+
+        $("#savePolicyBtn").show();
+    });
+
+    // ذخیره پالیسی جدید
+    $("#savePolicyBtn").click(function(){
+        let newPolicy = $("#policyEditor").val();
+        try {
+            JSON.parse(newPolicy); // اعتبارسنجی JSON
+        } catch(e){
+            showCustomAlert("Invalid JSON format: " + e.message, "danger");
+            return;
+        }
+
+        fetch("/set_bucket_policy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                bucket_name: currentPolicyBucket,
+                policy: newPolicy
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                showCustomAlert(data.message, "success");
+                $("#policyContent").text(JSON.stringify(JSON.parse(newPolicy), null, 2)).show();
+                $("#policyEditor").hide();
+                $("#savePolicyBtn").hide();
+                $("#editPolicyBtn").show();
+                currentPolicyRaw = newPolicy; // بروزرسانی پالیسی فعلی
+            } else {
+                showCustomAlert(data.message, "danger");
+            }
+        })
+        .catch(err => showCustomAlert("Server error: " + err, "danger"));
+    });
+});
+</script>
+
+
+<!-- Delete Policy Confirm Modal -->
+<div class="modal fade" id="deletePolicyConfirmModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Delete Policy</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete the policy for <strong id="deletePolicyBucketName"></strong>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeletePolicyBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lifecycle Modal -->
+<div class="modal fade" id="bucketLifecycleModal" tabindex="-1" role="dialog" aria-labelledby="bucketLifecycleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Lifecycle for <span id="lifecycleBucketName"></span></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <pre id="lifecycleContent" style="white-space: pre-wrap;"></pre>
+        <textarea id="lifecycleEditor" class="form-control" style="display:none; height:300px;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="editLifecycleBtn" class="btn btn-primary">Edit</button>
+        <button id="saveLifecycleBtn" class="btn btn-success" style="display:none;">Save</button>
+        <button id="deleteLifecycleBtn" class="btn btn-danger">Delete</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteLifecycleConfirmModal" tabindex="-1" role="dialog" aria-labelledby="deleteLifecycleConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete Lifecycle</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete lifecycle for <strong id="deleteLifecycleBucketName"></strong>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button id="confirmDeleteLifecycleBtn" type="button" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+$(document).ready(function(){
+    let currentLifecycleBucket = null;
+    let currentLifecycleRaw = null;
+
+    // باز کردن مودال و لود Lifecycle
+    $(".lifecycle-btn").click(function(){
+        currentLifecycleBucket = $(this).data("bucket");
+        $("#lifecycleBucketName").text(currentLifecycleBucket);
+        $("#lifecycleContent").text("Loading...");
+        $("#lifecycleEditor").hide();
+        $("#saveLifecycleBtn").hide();
+        $("#editLifecycleBtn").show();
+        $("#bucketLifecycleModal").modal("show");
+
+        fetch(`/get_bucket_lifecycle?bucket_name=${currentLifecycleBucket}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.success && data.lifecycle && data.lifecycle.length > 0){
+                    currentLifecycleRaw = JSON.stringify(data.lifecycle, null, 2);
+                    $("#lifecycleContent").text(currentLifecycleRaw);
+                } else {
+                    currentLifecycleRaw = null;
+                    $("#lifecycleContent").text("No lifecycle found.");
+                }
+            })
+            .catch(err => {
+                showCustomAlert("Error loading lifecycle: " + err, "danger");
+            });
+    });
+
+    // حذف Lifecycle
+    $("#deleteLifecycleBtn").click(function(){
+        if(!currentLifecycleBucket) return showCustomAlert("Bucket not selected", "warning");
+        $("#deleteLifecycleBucketName").text(currentLifecycleBucket);
+        $("#deleteLifecycleConfirmModal").modal("show");
+    });
+
+    $("#confirmDeleteLifecycleBtn").click(function(){
+        fetch("/delete_bucket_lifecycle", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ bucket_name: currentLifecycleBucket })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                showCustomAlert(data.message, "success");
+                $("#bucketLifecycleModal").modal("hide");
+                $("#deleteLifecycleConfirmModal").modal("hide");
+            } else {
+                showCustomAlert(data.message, "danger");
+            }
+        })
+        .catch(err => showCustomAlert("Server error: " + err, "danger"));
+    });
+
+    // ادیت Lifecycle
+    $("#editLifecycleBtn").click(function(){
+        $("#lifecycleContent").hide();
+        $("#editLifecycleBtn").hide();
+
+        if(currentLifecycleRaw){
+            $("#lifecycleEditor").val(currentLifecycleRaw).show();
+        } else {
+            // اسکلت اولیه Lifecycle
+            $("#lifecycleEditor").val(`[
+  {
+    "ID": "ExpireOldObjects",
+    "Status": "Enabled",
+    "Filter": { "Prefix": "" },
+    "Expiration": { "Days": 30 }
+  }
+]`).show();
+        }
+
+        $("#saveLifecycleBtn").show();
+    });
+
+    // ذخیره Lifecycle
+    $("#saveLifecycleBtn").click(function(){
+        let newLifecycle = $("#lifecycleEditor").val();
+        try {
+            JSON.parse(newLifecycle);
+        } catch(e){
+            return showCustomAlert("Invalid JSON format: " + e.message, "danger");
+        }
+
+        fetch("/set_bucket_lifecycle", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                bucket_name: currentLifecycleBucket,
+                lifecycle: newLifecycle
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                showCustomAlert(data.message, "success");
+                $("#lifecycleContent").text(JSON.stringify(JSON.parse(newLifecycle), null, 2)).show();
+                $("#lifecycleEditor").hide();
+                $("#saveLifecycleBtn").hide();
+                $("#editLifecycleBtn").show();
+                currentLifecycleRaw = newLifecycle;
+            } else {
+                showCustomAlert(data.message, "danger");
+            }
+        })
+        .catch(err => showCustomAlert("Server error: " + err, "danger"));
+    });
+});
+</script>
+
 
 
 </body>

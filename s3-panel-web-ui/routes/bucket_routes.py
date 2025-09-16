@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, json
 from helpers.auth import login_required
 from helpers.aws import get_buckets_info, get_user_type, create_bucket
 from helpers.aws import get_s3_client
@@ -256,7 +256,128 @@ def get_bucket_tags():
         tags = resp.get("TagSet", [])
         return jsonify({"success": True, "tags": tags})
     except ClientError as e:
-        # اگر هیچ تگی وجود نداشت S3 خطای NoSuchTagSet می‌دهد
         if e.response.get("Error", {}).get("Code") in ("NoSuchTagSet", "404"):
             return jsonify({"success": True, "tags": []})
         return jsonify({"success": False, "message": str(e)}), 400
+
+
+@bucket_bp.route("/get_bucket_policies", methods=["POST", "GET"])
+@login_required
+def get_bucket_policies():
+    bucket_name = request.get_json().get("bucket_name") if request.method=="POST" else request.args.get("bucket_name")
+    if not bucket_name:
+        return jsonify({"success": False, "message": "Bucket name required"}), 400
+
+    s3 = get_s3_client()
+    try:
+        resp = s3.get_bucket_policy(Bucket=bucket_name)
+        policy_json = resp.get("Policy")
+        return jsonify({"success": True, "policies": [policy_json] if policy_json else []})
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code")
+        if code in ("NoSuchBucketPolicy", "404"):
+            return jsonify({"success": True, "policies": []})
+        return jsonify({"success": False, "message": str(e)}), 400
+
+@bucket_bp.route("/set_bucket_policy", methods=["POST"])
+@login_required
+def add_bucket_policy():
+    data = request.get_json(silent=True) or {}
+    bucket_name = data.get("bucket_name")
+    policy = data.get("policy")
+    if not bucket_name or not policy:
+        return jsonify({"success": False, "message": "Bucket name and policy required"}), 400
+
+    s3 = get_s3_client()
+    try:
+        s3.put_bucket_policy(Bucket=bucket_name, Policy=policy)
+        session.pop("buckets_info", None)
+        return jsonify({"success": True, "message": f"✅ Policy added to {bucket_name}"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+
+@bucket_bp.route("/delete_bucket_policy", methods=["POST"])
+@login_required
+def delete_bucket_policy():
+    data = request.get_json(silent=True) or {}
+    bucket_name = data.get("bucket_name")
+
+    if not bucket_name:
+        return jsonify({"success": False, "message": "Bucket name required"}), 400
+
+    s3 = get_s3_client()
+    try:
+        s3.delete_bucket_policy(Bucket=bucket_name)
+        session.pop("buckets_info", None)
+        return jsonify({"success": True, "message": f"✅ Policy deleted from {bucket_name}"})
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code")
+        if code in ("NoSuchBucketPolicy", "NoSuchBucket"):
+            return jsonify({"success": True, "message": "Policy does not exist"})
+        return jsonify({"success": False, "message": str(e)}), 400
+
+
+@bucket_bp.route("/get_bucket_lifecycle", methods=["POST", "GET"])
+@login_required
+def get_bucket_lifecycle():
+    bucket_name = request.get_json().get("bucket_name") if request.method == "POST" else request.args.get("bucket_name")
+    if not bucket_name:
+        return jsonify({"success": False, "message": "Bucket name required"}), 400
+
+    s3 = get_s3_client()
+    try:
+        resp = s3.get_bucket_lifecycle_configuration(Bucket=bucket_name)
+        lifecycle = resp.get("Rules", [])
+        return jsonify({"success": True, "lifecycle": lifecycle})
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code")
+        if code in ("NoSuchLifecycleConfiguration", "404"):
+            return jsonify({"success": True, "lifecycle": []})
+        return jsonify({"success": False, "message": str(e)}), 400
+
+
+@bucket_bp.route("/set_bucket_lifecycle", methods=["POST"])
+@login_required
+def set_bucket_lifecycle():
+    data = request.get_json(silent=True) or {}
+    bucket_name = data.get("bucket_name")
+    lifecycle = data.get("lifecycle")
+
+    if not bucket_name or not lifecycle:
+        return jsonify({"success": False, "message": "Bucket name and lifecycle required"}), 400
+
+    s3 = get_s3_client()
+    try:
+        # اطمینان از اینکه همیشه یه لیست از Ruleها داریم
+        if isinstance(lifecycle, str):
+            lifecycle = json.loads(lifecycle)
+        if isinstance(lifecycle, dict):
+            lifecycle = [lifecycle]
+        lifecycle_dict = {"Rules": lifecycle}
+
+        s3.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle_dict)
+        session.pop("buckets_info", None)
+        return jsonify({"success": True, "message": f"✅ Lifecycle added to {bucket_name}"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+
+
+@bucket_bp.route("/delete_bucket_lifecycle", methods=["POST"])
+@login_required
+def delete_bucket_lifecycle():
+    data = request.get_json(silent=True) or {}
+    bucket_name = data.get("bucket_name")
+    if not bucket_name:
+        return jsonify({"success": False, "message": "Bucket name required"}), 400
+
+    s3 = get_s3_client()
+    try:
+        s3.delete_bucket_lifecycle(Bucket=bucket_name) 
+        session.pop("buckets_info", None)
+        return jsonify({"success": True, "message": f"✅ Lifecycle deleted from {bucket_name}"})
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code")
+        if code in ("NoSuchLifecycleConfiguration", "NoSuchBucket"):
+            return jsonify({"success": True, "message": "Lifecycle does not exist"})
+        return jsonify({"success": False, "message": str(e)}), 400
+

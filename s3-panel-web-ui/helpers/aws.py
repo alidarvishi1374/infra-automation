@@ -118,6 +118,18 @@ def get_buckets_info():
             bucket_data["Encryption"] = encryption.get("ServerSideEncryptionConfiguration") is not None
         except:
             bucket_data["Encryption"] = False
+        
+        # Lifecycle
+
+        try:
+            lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
+            bucket_data["Lifecycle"] = lifecycle.get("Rules", [])
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code")
+            if code in ("NoSuchLifecycleConfiguration", "404"):
+                bucket_data["Lifecycle"] = []
+            else:
+                bucket_data["Lifecycle"] = []
 
         buckets_info.append(bucket_data)
 
