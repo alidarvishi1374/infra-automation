@@ -415,7 +415,6 @@
     <i class="fas fa-plus"></i> Create Bucket
   </button>
 </div>
-
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
@@ -456,18 +455,24 @@
                                         <td>{{ bucket.Size if bucket.Size else 0 }} MB</td>
 <td>
     <div class="btn-group" role="group">
-        <button class="btn btn-sm btn-action btn-outline-primary edit-bucket-btn" 
+        <!-- <button class="btn btn-sm btn-action btn-outline-primary edit-bucket-btn" 
                 data-bucket="{{ bucket.Name }}">
             <i class="fas fa-edit"></i> Edit
-        </button>
+        </button> -->
         <button class="btn btn-sm btn-action btn-outline-danger delete-bucket-btn" 
                 data-bucket="{{ bucket.Name }}">
             <i class="fas fa-trash"></i> Delete
         </button>
-                        <button class="btn btn-sm btn-action btn-outline-info btn-versioning" 
-                    data-bucket="{{ bucket.Name }}">
+        <button class="btn btn-sm btn-action btn-outline-info btn-versioning" 
+                data-bucket="{{ bucket.Name }}">
                 Toggle Versioning
-            </button>
+        </button>
+<button class="btn btn-sm btn-action btn-outline-warning manage-tags-btn" 
+        data-bucket="{{ bucket.Name }}">
+        <i class="fas fa-tags"></i> Tags
+</button>
+
+
     </div>
 
 </td>
@@ -658,14 +663,12 @@ function showCustomAlert(message, type="info") {
 $(document).ready(function () {
     let bucketToDelete = "";
 
-    // وقتی روی دکمه Delete کلیک می‌شود، مودال باز شود
     $(".delete-bucket-btn").click(function () {
         bucketToDelete = $(this).data("bucket");
         $("#bucketToDeleteName").text(bucketToDelete);
         $("#deleteBucketModal").modal("show");
     });
 
-    // وقتی در مودال Delete تأیید می‌کنیم
     $("#confirmDeleteBucketBtn").click(function () {
         fetch("/delete_bucket", {
             method: "POST",
@@ -705,75 +708,8 @@ $(document).ready(function () {
 </script>
 
 
-<!-- Edit Bucket Modal -->
-<div class="modal fade" id="editBucketModal" tabindex="-1" role="dialog" aria-labelledby="editBucketModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header bg-warning text-dark">
-        <h5 class="modal-title" id="editBucketModalLabel"><i class="fas fa-edit"></i> Edit Bucket: <span id="editBucketName"></span></h5>
-        <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="editBucketForm">
-          <div class="form-group row">
-            <label class="col-sm-3 col-form-label">Versioning</label>
-            <div class="col-sm-9">
-              <select class="form-control" id="editVersioning">
-                <option value="Enabled">Enabled</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group row">
-            <label class="col-sm-3 col-form-label">MFA Delete</label>
-            <div class="col-sm-9">
-              <select class="form-control" id="editMFA">
-                <option value="Enabled">Enabled</option>
-                <option value="Disabled">Disabled</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group row">
-            <label class="col-sm-3 col-form-label">Replication</label>
-            <div class="col-sm-9">
-              <select class="form-control" id="editReplication">
-                <option value="Enabled">Enabled</option>
-                <option value="Disabled">Disabled</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Tags (key=value)</label>
-            <input type="text" class="form-control" id="editTags" placeholder="tag1=value1, tag2=value2">
-          </div>
-
-          <div class="form-group">
-            <label>Lifecycle (JSON)</label>
-            <textarea class="form-control" id="editLifecycle" rows="3" placeholder='{"Rules":[...]}'></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Policy (JSON)</label>
-            <textarea class="form-control" id="editPolicy" rows="4" placeholder='{"Statement":[...]}'></textarea>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-warning btn-sm" id="confirmEditBucketBtn">Save Changes</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 $(document).ready(function () {
-    // وقتی روی دکمه Edit کلیک شد
     $(".edit-bucket-btn").click(function () {
         const bucketName = $(this).data("bucket"); // گرفتن نام باکت از data attribute
         $("#editBucketName").text(bucketName); // نمایش نام باکت در مودال
@@ -883,7 +819,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-// استفاده از همان فانکشن آلرت زیبا
 function showCustomAlert(message, type="info") {
     const alertId = "alert-" + Date.now();
     const alertHtml = `
@@ -897,6 +832,133 @@ function showCustomAlert(message, type="info") {
     $("body").append(alertHtml);
     setTimeout(() => $("#" + alertId).alert("close"), 4000);
 }
+</script>
+
+<div class="modal fade" id="manageTagsModal" tabindex="-1" role="dialog" aria-labelledby="manageTagsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-white">
+        <h5 class="modal-title" id="manageTagsModalLabel"><i class="fas fa-tags"></i> Manage Tags for <span id="tagsBucketName"></span></h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered" id="tagsTable">
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Value</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- تگ‌ها از سرور اینجا لود می‌شوند -->
+            </tbody>
+        </table>
+        <hr>
+        <h6>Add New Tag</h6>
+        <form id="newTagForm">
+          <div class="form-row">
+            <div class="col">
+              <input type="text" class="form-control" id="newTagKey" placeholder="Key" required>
+            </div>
+            <div class="col">
+              <input type="text" class="form-control" id="newTagValue" placeholder="Value" required>
+            </div>
+            <div class="col-auto">
+              <button type="button" class="btn btn-success btn-sm" id="addNewTagBtn">Add</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+$(document).ready(function () {
+    let currentBucket = null;
+
+    function loadTags(bucketName) {
+        fetch(`/get_bucket_tags?bucket_name=${bucketName}`)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = $("#tagsTable tbody");
+                tbody.empty();
+                if (data.success && data.tags) {
+                    data.tags.forEach(tag => {
+                        tbody.append(`
+                            <tr>
+                                <td>${tag.Key}</td>
+                                <td>${tag.Value}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger delete-tag-btn" data-key="${tag.Key}">Delete</button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                }
+            });
+    }
+
+    // وقتی دکمه Tags زده شد
+    $(".manage-tags-btn").click(function () {
+        currentBucket = $(this).data("bucket");
+        $("#tagsBucketName").text(currentBucket);
+        loadTags(currentBucket);
+        $("#manageTagsModal").modal("show");
+    });
+
+    // حذف تگ
+    $(document).on("click", ".delete-tag-btn", function () {
+        const key = $(this).data("key");
+        fetch("/delete_bucket_tag", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bucket_name: currentBucket, key })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showCustomAlert(`Tag "${key}" deleted successfully.`, "success");
+                loadTags(currentBucket);
+            } else {
+                showCustomAlert(data.message, "danger");
+            }
+        });
+    });
+
+    // اضافه کردن تگ جدید
+    $("#addNewTagBtn").click(function () {
+        const key = $("#newTagKey").val().trim();
+        const value = $("#newTagValue").val().trim();
+        if (!key || !value) {
+            showCustomAlert("Both key and value are required.", "danger");
+            return;
+        }
+        fetch("/add_bucket_tag", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bucket_name: currentBucket, key, value })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showCustomAlert(`Tag "${key}" added successfully.`, "success");
+                $("#newTagKey").val("");
+                $("#newTagValue").val("");
+                loadTags(currentBucket);
+            } else {
+                showCustomAlert(data.message, "danger");
+            }
+        });
+    });
+});
 </script>
 
 
