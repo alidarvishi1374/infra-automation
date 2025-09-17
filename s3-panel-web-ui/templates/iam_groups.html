@@ -387,7 +387,7 @@ $(document).on("click", ".delete-group-btn", function() {
 
 
 <script>
-let allUsers = {{ all_users|tojson|safe }};
+let allUsers = []; // VSCode خوشحال میشه
 let pendingAdds = [];
 let pendingRemoves = [];
 

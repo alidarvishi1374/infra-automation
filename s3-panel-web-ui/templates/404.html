@@ -71,6 +71,12 @@
                         <h6 class="collapse-header">Buckets:</h6>
                         <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">buckets</a>
                     </div>
+                    <div class="bg-white py-2 collapse-inner rounded">
+                    <h6 class="collapse-header">Objects:</h6>
+<a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
+                    </div>
+
+
                 </div>
             </li>
 
