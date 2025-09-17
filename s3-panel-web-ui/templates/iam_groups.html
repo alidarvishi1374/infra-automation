@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>S3 Panel - IAM Groups</title>
+    <link rel="icon" type="image/svg" href="{{ url_for('static', filename='img/aws-logo.svg') }}">
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <!-- Fonts & Custom CSS -->
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,300,400,600,700,800,900" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+</head>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<body id="page-top">
+<div id="wrapper">
+    <!-- Sidebar -->
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+        <!-- Brand -->
+        <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
+            <div class="sidebar-brand-icon rotate-n-13">
+                <i class="fab fa-aws" style="color: orange;"></i>
+            </div>
+            <div class="sidebar-brand-text mx-3">S3 Panel</div>
+        </a>
+        <hr class="sidebar-divider my-0">
+        <!-- Dashboard -->
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('bucket.home') }}">
+                <i class="fas fa-fw fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+        </li>
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">Interface</div>
+        {% if user_info.type == "Root Account" %}
+        <li class="nav-item active">
+            <a class="nav-link" href="#" data-toggle="collapse" data-target="#collapseIAM"
+               aria-expanded="true" aria-controls="collapseIAM">
+                <i class="fa fa-key" aria-hidden="true"></i>
+                <span>IAM</span>
+            </a>
+            <div id="collapseIAM" class="collapse show" aria-labelledby="headingIAM" data-parent="#accordionSidebar">
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <h6 class="collapse-header">IAM Sections:</h6>
+                    <a class="collapse-item" href="{{ url_for('user.iam_users') }}">Users</a>
+                    <a class="collapse-item active" href="{{ url_for('iam_groups.iam_groups') }}">Groups</a>
+                </div>
+            </div>
+        </li>
+        {% endif %}
+        <hr class="sidebar-divider d-none d-md-block">
+    </ul>
+    <!-- End Sidebar -->
+
+    <!-- Content Wrapper -->
+    <div id="content-wrapper" class="d-flex flex-column">
+        <div id="content">
+            <!-- Topbar -->
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                    <i class="fa fa-bars"></i>
+                </button>
+            </nav>
+            <!-- End Topbar -->
+
+            <!-- Page Content -->
+            <div class="container-fluid">
+                <h1 class="h3 mb-4 text-gray-800">IAM Groups</h1>
+
+                <!-- Create Group Button -->
+                <div class="mb-3 text-right">
+                    <button class="btn btn-success btn-lg shadow" data-toggle="modal" data-target="#createGroupModal">
+                        <i class="fas fa-users"></i> Create Group
+                    </button>
+                </div>
+
+                <!-- Groups Table -->
+                <div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
+                    <div class="card-header py-3 bg-gradient-primary text-white">
+                        <h6 class="m-0 font-weight-bold">Groups List</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="iamGroupsTable" class="table table-hover table-striped table-bordered align-middle text-center">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Group Name</th>
+                                        <th>ARN</th>
+                                        <th>Members</th>
+                                        <th>Actions</th>
+                                        <th>Inline Group Policy</th>
+                                        <th>Attached Policies</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for group in iam_groups %}
+                                    <tr class="animate__animated animate__fadeInUp animate__faster">
+                                        <td><span class="badge badge-info px-3 py-2">{{ group.GroupName }}</span></td>
+                                        <td class="text-break">{{ group.Arn }}</td>
+                                        <td>
+                                            {% if group.Members %}
+                                                {% for member in group.Members %}
+                                                <span class="badge badge-success mx-1">{{ member }}</span>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="badge badge-secondary">No Members</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="d-flex justify-content-center">
+                                            <button class="btn btn-sm btn-outline-primary flex-fill mx-1 manage-members-btn"
+                                                data-group="{{ group.GroupName }}">
+                                                <i class="fas fa-user-plus"></i> Manage Members
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger flex-fill mx-1 delete-group-btn"
+                                                data-group="{{ group.GroupName }}">
+                                                <i class="fas fa-trash"></i> Delete Group
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info view-inline-policies-btn" data-group="{{ group.GroupName }}">
+                                                <i class="fas fa-file-code"></i> View
+                                            </button>
+                                        </td>
+                                        <td>
+<button class="btn btn-sm btn-info view-attached-policies-btn" data-group="{{ group.GroupName }}">
+    <i class="fas fa-file-code"></i> View
+</button>
+
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            <!-- Pagination -->
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    Show 
+                                    <select id="rowsPerPageSelect" class="form-control d-inline-block" style="width: auto;">
+                                        <option value="5">5</option>
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    entries
+                                </div>
+                                <nav>
+                                    <ul id="pagination" class="pagination mb-0"></ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End Groups Table -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1" role="dialog" aria-labelledby="createGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0 rounded-lg">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-users"></i> Create New Group
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="createGroupForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="groupName" class="font-weight-bold">Group Name</label>
+                            <input type="text" class="form-control" id="groupName" name="group_name" placeholder="Enter group name..." required>
+                    </div>
+                    <div id="createGroupResult" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Create
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Pagination
+    const $table = $("#iamGroupsTable");
+    const $rows = $table.find("tbody tr");
+    const $pagination = $("#pagination");
+    const $rowsPerPageSelect = $("#rowsPerPageSelect");
+
+    let currentPage = 1;
+    let rowsPerPage = parseInt($rowsPerPageSelect.val());
+
+    function renderTable() {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        $rows.hide().slice(start, end).show();
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil($rows.length / rowsPerPage);
+        $pagination.empty();
+
+        const prevLi = $('<li class="page-item"></li>');
+        if (currentPage === 1) prevLi.addClass("disabled");
+        const prevA = $('<a class="page-link" href="#">«</a>');
+        prevA.click(e => { e.preventDefault(); if(currentPage>1){currentPage--; renderTable();} });
+        prevLi.append(prevA);
+        $pagination.append(prevLi);
+
+        for(let i=1;i<=totalPages;i++){
+            const li = $('<li class="page-item"></li>');
+            if(i===currentPage) li.addClass("active");
+            const a = $('<a class="page-link" href="#">'+i+'</a>');
+            a.click(e=>{e.preventDefault(); currentPage=i; renderTable();});
+            li.append(a);
+            $pagination.append(li);
+        }
+
+        const nextLi = $('<li class="page-item"></li>');
+        if(currentPage===totalPages) nextLi.addClass("disabled");
+        const nextA = $('<a class="page-link" href="#">»</a>');
+        nextA.click(e=>{e.preventDefault(); if(currentPage<totalPages){currentPage++; renderTable();}});
+        nextLi.append(nextA);
+        $pagination.append(nextLi);
+    }
+
+    $rowsPerPageSelect.change(function(){
+        rowsPerPage=parseInt($(this).val());
+        currentPage=1;
+        renderTable();
+    });
+
+    renderTable();
+
+    // Create Group AJAX
+$("#createGroupForm").submit(function(e){
+    e.preventDefault();
+    const data = { group_name: $("#groupName").val() }; // 👈 هماهنگ با backend
+    const $result = $("#createGroupResult");
+    $result.html('');
+    $.ajax({
+        url: "{{ url_for('iam_groups.create_group') }}",
+        type: "POST",
+        contentType: "application/json",  // 👈 ارسال به صورت JSON
+        data: JSON.stringify(data),       // 👈 stringify
+        success: function(response){
+            if(response.success){
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true
+                });
+
+                Toast.fire({
+                    icon: 'success',
+                    title: `Group "${data.group_name}" created successfully`
+                }).then(() => location.reload());
+            } else {
+                $result.html('<div class="alert alert-danger">'+(response.message||"Error creating group.")+'</div>');
+            }
+        },
+        error: function(err){
+            $result.html('<div class="alert alert-danger">AJAX error: '+err.statusText+'</div>');
+        }
+    });
+});
+
+
+    // TODO: Handle manage members and delete group buttons with AJAX
+});
+</script>
+
+<script>
+$(document).on("click", ".delete-group-btn", function() {
+    const groupName = $(this).data("group");
+
+    Swal.fire({
+        title: 'Delete Group',
+        text: `Are you sure you want to delete group "${groupName}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: "{{ url_for('iam_groups.delete_group') }}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ group_name: groupName }),
+                success: function(response) {
+                    if(response.success){
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 4000,
+                            timerProgressBar: true
+                        });
+
+                        Toast.fire({
+                            icon: 'success',
+                            title: `Group "${groupName}" has been deleted`
+                        }).then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', response.message || "Failed to delete group.", 'error');
+                    }
+                },
+                error: function(err){
+                    Swal.fire('Error', "AJAX error: " + err.statusText, 'error');
+                }
+            });
+        }
+    });
+});
+
+</script>
+
+<!-- Manage Members Modal -->
+<div class="modal fade" id="manageMembersModal" tabindex="-1" role="dialog" aria-labelledby="manageMembersLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content shadow-lg border-0 rounded-lg">
+      <div class="modal-header bg-gradient-primary text-white">
+        <h5 class="modal-title font-weight-bold" id="manageMembersLabel">
+          <i class="fas fa-user-cog"></i> Manage Members
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Group name hidden -->
+        <input type="hidden" id="currentGroupName">
+
+        <!-- Current Members -->
+        <h6 class="font-weight-bold">Current Members:</h6>
+        <ul id="groupMembersList" class="list-group mb-3"></ul>
+
+        <!-- Add User -->
+        <h6 class="font-weight-bold">Add User to Group:</h6>
+        <div class="input-group mb-3">
+          <select id="allUsersSelect" class="form-control"></select>
+          <div class="input-group-append">
+            <button id="addUserTempBtn" class="btn btn-success">
+              <i class="fas fa-user-plus"></i> Add
+            </button>
+          </div>
+        </div>
+
+        <div id="manageMembersResult" class="mt-3"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveMembersBtn">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+let allUsers = {{ all_users|tojson|safe }};
+let pendingAdds = [];
+let pendingRemoves = [];
+
+// باز شدن مودال Manage Members
+$(document).on("click", ".manage-members-btn", function() {
+    const groupName = $(this).data("group");
+    $("#currentGroupName").val(groupName);
+    $("#manageMembersLabel").text(`Manage Members: ${groupName}`);
+    $("#manageMembersResult").html('');
+    pendingAdds = [];
+    pendingRemoves = [];
+
+    // گرفتن اعضای فعلی از ردیف جدول
+    const membersBadges = $(this).closest("tr").find("td:nth-child(3) .badge-success");
+    const members = [];
+    membersBadges.each(function(){ members.push($(this).text()); });
+
+    renderMembersList(members);
+
+    // پر کردن select با همه‌ی یوزرها
+    const $select = $("#allUsersSelect");
+    $select.empty();
+    allUsers.forEach(u=>{
+        $select.append(`<option value="${u.UserName}">${u.UserName}</option>`);
+    });
+
+    $("#manageMembersModal").modal("show");
+});
+
+// رندر لیست اعضا در مودال
+function renderMembersList(members){
+    const $list = $("#groupMembersList");
+    $list.empty();
+    if(members.length){
+        members.forEach(m=>{
+            const li = $(`
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="member-name">${m}</span>
+                <button class="btn btn-sm btn-outline-danger temp-remove-btn" data-user="${m}">
+                  <i class="fas fa-user-minus"></i> Remove
+                </button>
+              </li>`);
+            $list.append(li);
+        });
+    } else {
+        $list.append('<li class="list-group-item text-muted">No members in this group</li>');
+    }
+}
+
+// وقتی کاربر روی "Remove" داخل مودال می‌زنه (فعلاً تغییر موقت)
+$(document).on("click", ".temp-remove-btn", function() {
+    const username = $(this).data("user");
+
+    // اگر قبلاً کاربر در pendingAdds بود => حذف از pendingAdds (یعنی کاربر رو اول add کردیم بعد remove)
+    const addIndex = pendingAdds.indexOf(username);
+    if(addIndex !== -1){
+        pendingAdds.splice(addIndex, 1);
+        // حذف لی آیتم "Pending Add" از لیست نمایش
+        $("#groupMembersList li").filter(function(){
+            return $(this).find('.member-name').text().trim() === username && $(this).find('.badge').length;
+        }).remove();
+        return;
+    }
+
+    // وگرنه، علامت‌گذاری برای حذف
+    if(!pendingRemoves.includes(username)){
+        pendingRemoves.push(username);
+    }
+    $(this).closest("li").remove();
+});
+
+// وقتی کاربر روی "Add" داخل مودال می‌زنه (فعلاً تغییر موقت)
+$("#addUserTempBtn").click(function(){
+    const username = $("#allUsersSelect").val();
+    if(!username) return;
+
+    // اگر قبلاً در pendingAdds بود خبر بدیم
+    if(pendingAdds.includes(username)){
+        Swal.fire({ icon: 'info', title: 'Already queued', text: `${username} already queued for add`, timer: 1400, showConfirmButton: false });
+        return;
+    }
+
+    // اگر قبلاً برای حذف علامت خورده بود => حذف از pendingRemoves
+    const remIndex = pendingRemoves.indexOf(username);
+    if(remIndex !== -1){
+        pendingRemoves.splice(remIndex, 1);
+        // اگر لازم بود می‌تونیم لیست رو رندر مجدد کنیم؛ در این پیاده‌سازی ساده کافیست که بعداً Save کار می‌کنه
+    }
+
+    pendingAdds.push(username);
+
+    const li = $(`
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span class="member-name">${username}</span>
+        <span class="badge badge-info">Pending Add</span>
+      </li>`);
+    $("#groupMembersList").append(li);
+});
+
+// Save: ارسال همه درخواست‌ها و نمایش alert/toast برای هر یوزر
+$("#saveMembersBtn").click(function(){
+    const groupName = $("#currentGroupName").val();
+    const requests = [];
+    const addedSuccess = [];
+    const removedSuccess = [];
+    const addedFail = [];
+    const removedFail = [];
+
+    // ساخت درخواست‌ها برای Add
+    pendingAdds.forEach(u=>{
+        const req = $.ajax({
+            url: "{{ url_for('iam_groups.add_user_to_group') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ group_name: groupName, username: u })
+        }).done(function(res){
+            if(res.success){ addedSuccess.push(u); }
+            else { addedFail.push({user:u, msg:res.message}); }
+        }).fail(function(jqXHR){
+            addedFail.push({user:u, msg: jqXHR.statusText || "AJAX error"});
+        });
+        requests.push(req);
+    });
+
+    // ساخت درخواست‌ها برای Remove
+    pendingRemoves.forEach(u=>{
+        const req = $.ajax({
+            url: "{{ url_for('iam_groups.remove_user_from_group') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ group_name: groupName, username: u })
+        }).done(function(res){
+            if(res.success){ removedSuccess.push(u); }
+            else { removedFail.push({user:u, msg:res.message}); }
+        }).fail(function(jqXHR){
+            removedFail.push({user:u, msg: jqXHR.statusText || "AJAX error"});
+        });
+        requests.push(req);
+    });
+
+    if(requests.length === 0){
+        $("#manageMembersResult").html('<div class="alert alert-info">No changes to save.</div>');
+        return;
+    }
+
+    // نمایش لودینگ مودال
+    Swal.fire({
+        title: 'Saving changes...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    // وقتی همه درخواست‌ها (موفق یا ناموفق) انجام شدن
+    $.when.apply($, requests).always(function(){
+        Swal.close();
+
+        // نمایش خلاصه موفقیت‌ها به صورت toast خوشگل
+if (addedSuccess.length || removedSuccess.length) {
+    let msg = "";
+    if (addedSuccess.length) {
+        msg += `${addedSuccess.join(", ")} added to ${groupName}\n`;
+    }
+    if (removedSuccess.length) {
+        msg += `${removedSuccess.join(", ")} removed from ${groupName}`;
+    }
+
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true
+    });
+
+    Toast.fire({
+        icon: 'success',
+        title: msg.replace(/\n/g, '<br/>')  // برای اینکه خط بعدی هم خوشگل بیاد
+    });
+}
+
+
+        // اگر خطایی بود، یک هشدار جمعی نمایش بده
+        const errors = [];
+        if(addedFail.length) errors.push(`Failed to add: ${addedFail.map(x=>x.user).join(', ')}`);
+        if(removedFail.length) errors.push(`Failed to remove: ${removedFail.map(x=>x.user).join(', ')}`);
+
+        if(errors.length){
+            Swal.fire({
+                icon: 'error',
+                title: 'Some operations failed',
+                html: errors.join('<br/>')
+            });
+            // می‌تونی تصمیم بگیری اینجا modal رو نبندیم تا کاربر بررسی کنه
+            $("#manageMembersResult").html('<div class="alert alert-danger">Some changes failed. See notifications.</div>');
+        } else {
+            $("#manageMembersResult").html('<div class="alert alert-success">Changes saved successfully!</div>');
+            // بستن مودال و رفرش جدول بعد از کمی تاخیر
+            setTimeout(()=>{ $("#manageMembersModal").modal('hide'); location.reload(); }, 900);
+        }
+    });
+});
+</script>
+
+
+<!-- Inline Policies Modal -->
+<div class="modal fade" id="inlinePoliciesModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inline Policies for <span id="policyGroupName"></span></h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- لیست پالیسی‌ها -->
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Policy Name</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inlinePoliciesTable"></tbody>
+        </table>
+
+        <button class="btn btn-success" id="addPolicyBtn">+ Add New Policy</button>
+
+        <!-- بخش ادیت/افزودن -->
+        <div id="policyEditorSection" style="display:none; margin-top:20px;">
+          <input type="text" id="policyNameInput" class="form-control mb-2" placeholder="Policy Name">
+          <textarea id="policyDocumentInput" class="form-control" rows="10" placeholder="Enter JSON policy here"></textarea>
+          <div class="mt-2">
+            <button class="btn btn-primary" id="savePolicyBtn">Save</button>
+            <button class="btn btn-secondary" id="cancelPolicyBtn">Cancel</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentGroupName = null;
+let editingPolicy = null; // حالت ادیت یا ایجاد جدید
+
+// وقتی روی دکمه View Inline Policies کلیک میشه
+$(document).on("click", ".view-inline-policies-btn", function () {
+    const groupName = $(this).data("group");
+    viewInlinePolicies(groupName);
+});
+
+// گرفتن لیست پالیسی‌ها و نمایش
+function viewInlinePolicies(groupName) {
+    currentGroupName = groupName;
+    $("#policyGroupName").text(groupName);
+
+    $.getJSON(`/get_inline_policies?group_name=${groupName}`, function(resp) {
+        if (resp.success) {
+            let rows = "";
+            resp.policies.forEach(p => {
+                rows += `
+                  <tr>
+                    <td>${p.PolicyName}</td>
+                    <td>
+                      <button class="btn btn-sm btn-info" onclick='editPolicy("${p.PolicyName}", \`${JSON.stringify(p.PolicyDocument)}\`)'>Edit</button>
+                      <button class="btn btn-sm btn-danger" onclick="deletePolicy('${p.PolicyName}')">Delete</button>
+                    </td>
+                  </tr>`;
+            });
+            if (rows === "") {
+                rows = `<tr><td colspan="2" class="text-center">No inline policies found</td></tr>`;
+            }
+            $("#inlinePoliciesTable").html(rows);
+        } else {
+            $("#inlinePoliciesTable").html(`<tr><td colspan="2">${resp.message}</td></tr>`);
+        }
+        $("#inlinePoliciesModal").modal("show");
+    });
+}
+
+// Add New Policy
+$("#addPolicyBtn").on("click", function() {
+    editingPolicy = null;
+    $("#policyNameInput").val("");
+    $("#policyDocumentInput").val("");
+    $("#policyEditorSection").show();
+});
+
+// Cancel
+$("#cancelPolicyBtn").on("click", function() {
+    $("#policyEditorSection").hide();
+});
+
+// Save Policy
+$("#savePolicyBtn").on("click", function() {
+    const name = $("#policyNameInput").val().trim();
+    const doc = $("#policyDocumentInput").val().trim();
+
+    if (!name || !doc) {
+        Swal.fire("Error", "Please enter policy name and JSON document", "error");
+        return;
+    }
+
+    let parsed;
+    try {
+        parsed = JSON.parse(doc);
+    } catch (e) {
+        Swal.fire("Invalid JSON", "Policy document must be valid JSON", "error");
+        return;
+    }
+
+    const payload = {
+        group_name: currentGroupName,
+        policy_name: name,
+        policy_document: parsed
+    };
+
+    const url = editingPolicy 
+        ? "/update_inline_policy" 
+        : "/add_inline_policy";
+
+    $.ajax({
+        url,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(payload),
+        success: function(resp) {
+            if (resp.success) {
+                Swal.fire({
+                    icon: "success",
+                    title: `Policy ${editingPolicy ? "updated" : "added"} successfully`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                $("#policyEditorSection").hide();
+                viewInlinePolicies(currentGroupName); // رفرش لیست
+            } else {
+                Swal.fire("Error", resp.message || "Failed to save policy", "error");
+            }
+        },
+        error: function(err) {
+            Swal.fire("Error", "AJAX error: " + err.statusText, "error");
+        }
+    });
+});
+
+// Edit Policy
+function editPolicy(name, doc) {
+    editingPolicy = name;
+    $("#policyNameInput").val(name);
+    $("#policyDocumentInput").val(JSON.stringify(JSON.parse(doc), null, 2));
+    $("#policyEditorSection").show();
+}
+
+// Delete Policy
+function deletePolicy(name) {
+    Swal.fire({
+        title: "Delete Policy",
+        text: `Are you sure you want to delete policy "${name}"?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Yes, delete it!",
+        cancelButtonText: "Cancel"
+    }).then(result => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: "/delete_inline_policy",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ group_name: currentGroupName, policy_name: name }),
+                success: function(resp) {
+                    if (resp.success) {
+                        Swal.fire({
+                            icon: "success",
+                            title: `Policy "${name}" deleted`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        viewInlinePolicies(currentGroupName);
+                    } else {
+                        Swal.fire("Error", resp.message || "Failed to delete policy", "error");
+                    }
+                },
+                error: function(err) {
+                    Swal.fire("Error", "AJAX error: " + err.statusText, "error");
+                }
+            });
+        }
+    });
+}
+</script>
+
+
+
+
+<!-- Attached Policies Modal -->
+<div class="modal fade" id="attachedPoliciesModal" tabindex="-1" role="dialog" aria-labelledby="attachedPoliciesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Attached Policies - <span id="attachedGroupName"></span></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- لیست پالیسی‌های attach شده -->
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Policy Name</th>
+              <th>Policy ARN</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="attachedPoliciesTable"></tbody>
+        </table>
+
+        <hr>
+
+        <!-- فرم برای attach کردن پالیسی جدید -->
+        <h6>Attach New Policy</h6>
+        <div class="form-group">
+          <input type="text" id="newPolicyArn" class="form-control" placeholder="Enter Policy ARN">
+        </div>
+        <button id="attachPolicyBtn" class="btn btn-success">Attach Policy</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentAttachedGroup = null;
+
+// باز کردن مودال Attached Policies
+function openAttachedPoliciesModal(groupName) {
+  currentAttachedGroup = groupName;
+  document.getElementById("attachedGroupName").innerText = groupName;
+
+  // گرفتن لیست attach شده‌ها
+  fetch(`/get_attached_group_policies?group_name=${groupName}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        let rows = "";
+        data.policies.forEach(p => {
+          rows += `
+            <tr>
+              <td>${p.PolicyName}</td>
+              <td>${p.PolicyArn}</td>
+              <td>
+                <button class="btn btn-danger btn-sm" onclick="detachPolicy('${p.PolicyArn}')">
+                  <i class="fas fa-trash"></i> Detach
+                </button>
+              </td>
+            </tr>`;
+        });
+        document.getElementById("attachedPoliciesTable").innerHTML = rows || "<tr><td colspan='3'>No attached policies.</td></tr>";
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: data.message || 'Failed to load attached policies'
+        });
+      }
+    });
+
+  $("#attachedPoliciesModal").modal("show");
+}
+
+// Detach کردن پالیسی
+function detachPolicy(policyArn) {
+  fetch("/detach_group_policy", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ group_name: currentAttachedGroup, policy_arn: policyArn })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Detached successfully',
+        timer: 1500,
+        showConfirmButton: false
+      }).then(() => openAttachedPoliciesModal(currentAttachedGroup));
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: data.message || 'Failed to detach policy'
+      });
+    }
+  });
+}
+
+// Attach کردن پالیسی جدید
+$(document).on("click", "#attachPolicyBtn", function() {
+  const arn = $("#newPolicyArn").val().trim();
+  if (!arn) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Enter Policy ARN',
+      timer: 1500,
+      showConfirmButton: false
+    });
+    return;
+  }
+
+  fetch("/attach_group_policy", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ group_name: currentAttachedGroup, policy_arn: arn })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      $("#newPolicyArn").val("");
+      Swal.fire({
+        icon: 'success',
+        title: 'Policy attached',
+        timer: 1500,
+        showConfirmButton: false
+      }).then(() => openAttachedPoliciesModal(currentAttachedGroup));
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: data.message || 'Failed to attach policy'
+      });
+    }
+  });
+});
+
+// دکمه‌ها را با ظاهر btn-info و آیکون فایل کد هماهنگ کن
+$(document).on("click", ".view-attached-policies-btn", function() {
+    const groupName = $(this).data("group");
+    openAttachedPoliciesModal(groupName);
+});
+</script>
+
+
+
+</body>
+</html>

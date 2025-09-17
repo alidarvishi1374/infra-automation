@@ -382,3 +382,12 @@ def create_bucket(endpoint, access_key, secret_key, bucket_name, region="us-east
         return {"success": False, "message": f"❌ Unexpected error: {str(e)}"}
 
 
+def get_iam_client(access_key=None, secret_key=None, endpoint_url=None, region_name="us-east-1"):
+    """Return a boto3 IAM client, using given credentials or default ones."""
+    return boto3.client(
+        "iam",
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        endpoint_url=endpoint_url,
+        region_name=region_name
+    )
