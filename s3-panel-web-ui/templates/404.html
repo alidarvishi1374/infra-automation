@@ -59,26 +59,35 @@
                 Interface
             </div>
 
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTwo"
-                    aria-expanded="true" aria-controls="collapseTwo">
-                    <i class="fas fa-fw fa-cog"></i>
-                    <span>Buckets</span>
-                </a>
-                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Buckets:</h6>
-                        <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">buckets</a>
-                    </div>
-                    <div class="bg-white py-2 collapse-inner rounded">
-                    <h6 class="collapse-header">Objects:</h6>
-<a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
-                    </div>
+            <!-- Nav Item - Buckets Collapse Menu -->
+<li class="nav-item">
+    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
+        aria-expanded="true" aria-controls="collapseBuckets">
+        <i class="fa fa-cubes" aria-hidden="true"></i>
+        <span>Buckets</span>
+    </a>
+    <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+            <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">Buckets</a>
+        </div>
+    </div>
+</li>
+
+<!-- Nav Item - Objects Collapse Menu -->
+<li class="nav-item">
+    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseObjects"
+        aria-expanded="true" aria-controls="collapseObjects">
+        <i class="fas fa-database"></i>
+        <span>Objects</span>
+    </a>
+    <div id="collapseObjects" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+            <a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
+        </div>
+    </div>
+</li>
 
 
-                </div>
-            </li>
 
             <!-- Nav Item - Utilities Collapse Menu -->
             {% if user_info.type == "Root Account" %}

@@ -2,6 +2,8 @@ from flask import Blueprint, render_template, session, jsonify, request, flash, 
 from helpers.auth import login_required
 import boto3
 from io import BytesIO
+from helpers.aws import get_user_type
+
 
 object_bp = Blueprint("objects", __name__) 
 
@@ -20,12 +22,14 @@ def get_s3_client():
 @login_required
 def all_buckets():
     s3 = get_s3_client()
+    user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
     try:
         response = s3.list_buckets()
         buckets = response.get("Buckets", [])
     except Exception as e:
         flash(f"Error listing buckets: {str(e)}", "danger")
         buckets = []
+    
 
     return render_template(
         "objects.html",
@@ -33,7 +37,8 @@ def all_buckets():
         bucket_name=None,
         files=[],
         folders=[],
-        prefix=""
+        prefix="",
+        user_info=user_info
     )
 
 @object_bp.route("/buckets/<bucket_name>/objects", methods=["GET", "POST"])
@@ -41,6 +46,8 @@ def all_buckets():
 def list_objects(bucket_name):
     s3 = get_s3_client()
     prefix = request.args.get("prefix") or request.form.get("prefix", "").strip()
+    user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
+
 
     # --- آپلود فایل ---
     if request.method == "POST" and "file" in request.files:
@@ -99,7 +106,8 @@ def list_objects(bucket_name):
         bucket_name=bucket_name,
         files=files,
         folders=list(folders),
-        prefix=prefix
+        prefix=prefix,
+        user_info=user_info
     )
 
 # دانلود آبجکت

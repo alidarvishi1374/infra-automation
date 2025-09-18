@@ -41,6 +41,32 @@
         </li>
         <hr class="sidebar-divider">
         <div class="sidebar-heading">Interface</div>
+ <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
+                   aria-expanded="true" aria-controls="collapseBuckets">
+                    <i class="fa fa-cubes" aria-hidden="true"></i>
+                    <span>Buckets</span>
+                </a>
+                <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">Buckets</a>
+                    </div>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseObjects"
+                   aria-expanded="true" aria-controls="collapseObjects">
+                    <i class="fas fa-database" aria-hidden="true"></i>
+                    <span>Objects</span>
+                </a>
+                <div id="collapseObjects" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
+                    </div>
+                </div>
+            </li>
+
         {% if user_info.type == "Root Account" %}
         <li class="nav-item active">
             <a class="nav-link" href="#" data-toggle="collapse" data-target="#collapseIAM"
@@ -58,6 +84,13 @@
         </li>
         {% endif %}
         <hr class="sidebar-divider d-none d-md-block">
+                    <div class="sidebar-heading">User</div>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('user.profile') }}">
+                    <i class="fas fa-fw fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
     </ul>
     <!-- End Sidebar -->
 
@@ -69,6 +102,33 @@
                 <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                     <i class="fa fa-bars"></i>
                 </button>
+                 <!-- Topbar Navbar -->
+                    <ul class="navbar-nav ml-auto">
+
+                        <!-- User Information -->
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                    {{ user_info.UserName or "No Name" }}
+                                    {% if user_info.type %}
+                                        ({{ user_info.type }})
+                                    {% endif %}
+                                </span>
+                                <img class="img-profile rounded-circle" src="{{ url_for('static', filename='img/undraw_profile.svg') }}">
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="{{ url_for('user.profile') }}">
+                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i> Profile
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i> Logout
+                                </a>
+                            </div>
+                        </li>
+
+                    </ul>
             </nav>
             <!-- End Topbar -->
 
@@ -931,7 +991,25 @@ $(document).on("click", ".view-attached-policies-btn", function() {
     openAttachedPoliciesModal(groupName);
 });
 </script>
-
+    <!-- Logout Modal-->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
 </body>

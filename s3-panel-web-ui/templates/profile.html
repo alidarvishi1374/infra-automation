@@ -54,20 +54,48 @@
             </li>
             <hr class="sidebar-divider">
             <div class="sidebar-heading">Interface</div>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('bucket.buckets') }}">
-                    <i class="fas fa-fw fa-table"></i>
+             <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
+                   aria-expanded="true" aria-controls="collapseBuckets">
+                    <i class="fa fa-cubes" aria-hidden="true"></i>
                     <span>Buckets</span>
                 </a>
+                <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">Buckets</a>
+                    </div>
+                </div>
             </li>
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseObjects"
+                   aria-expanded="true" aria-controls="collapseObjects">
+                    <i class="fas fa-database"></i>
+                    <span>Objects</span>
+                </a>
+                <div id="collapseObjects" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
+                    </div>
+                </div>
+            </li>
+
             {% if user_info.type == "Root Account" %}
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('user.iam_users') }}">
-                    <i class="fa fa-key" aria-hidden="true"></i>
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseUtilities"
+                    aria-expanded="true" aria-controls="collapseUtilities">
+                        <i class="fa fa-key" aria-hidden="true"></i>
                     <span>IAM</span>
                 </a>
+                <div id="collapseUtilities" class="collapse" aria-labelledby="headingUtilities"
+                    data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('user.iam_users') }}">Users</a>
+                    </div>
+                </div>
             </li>
             {% endif %}
+
             <hr class="sidebar-divider">
             <div class="sidebar-heading">User</div>
             <li class="nav-item active">

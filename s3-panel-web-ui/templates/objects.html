@@ -6,14 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>S3 Panel - Objects</title>
     <link rel="icon" type="image/svg" href="{{ url_for('static', filename='img/aws-logo.svg') }}">
-    <!-- DataTables JS & CSS -->
+
+    <!-- DataTables JS & CSS (optional) -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <!-- Custom fonts & styles -->
-    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+
+    <!-- Custom fonts & styles (SB Admin 2) -->
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,300,400,600,700,800,900" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 
     <style>
         .folder-icon { color: #FFD700; font-size: 1.4rem; margin-right: 10px; transition: transform 0.2s, color 0.2s; }
@@ -28,324 +29,587 @@
         .bucket-card .card:hover .fa-hdd { transform: scale(1.2) rotate(-10deg); }
     </style>
 </head>
+
 <body id="page-top">
-<div id="wrapper">
-    <!-- Sidebar -->
-    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
-        <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('bucket.home') }}">
-            <div class="sidebar-brand-icon rotate-n-13"><i class="fab fa-aws" style="color: orange;"></i></div>
-            <div class="sidebar-brand-text mx-3">S3 Panel</div>
-        </a>
-        <hr class="sidebar-divider my-0">
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('bucket.home') }}"><i class="fas fa-fw fa-tachometer-alt"></i><span>Dashboard</span></a></li>
-        <hr class="sidebar-divider">
-        <div class="sidebar-heading">Interface</div>
-        <li class="nav-item"><a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseTwo"
-           aria-expanded="true" aria-controls="collapseTwo"><i class="fas fa-fw fa-cog"></i><span>Buckets</span></a>
-            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionSidebar">
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <h6 class="collapse-header">Buckets:</h6>
-                    <a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">buckets</a>
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar (copied + adapted from your 404 layout) -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+            <!-- Sidebar - Brand -->
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('bucket.home') }}">
+                <div class="sidebar-brand-icon rotate-n-13">
+                    <i class="fab fa-aws" style="color: orange;"></i>
                 </div>
-            </div>
-        </li>
-        <hr class="sidebar-divider d-none d-md-block">
-    </ul>
-    <!-- End of Sidebar -->
+                <div class="sidebar-brand-text mx-3">S3 Panel</div>
+            </a>
 
-    <div id="content-wrapper" class="d-flex flex-column">
-        <div id="content">
-            <!-- Topbar -->
-            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3"><i class="fa fa-bars"></i></button>
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item dropdown no-arrow">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                           data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                           <img class="img-profile rounded-circle" src="{{ url_for('static', filename='img/undraw_profile.svg') }}">
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
-                             aria-labelledby="userDropdown">
-                            <a class="dropdown-item" href="{{ url_for('user.profile') }}"><i class="fas fa-user fa-sm fa-fw me-2 text-gray-400"></i>Profile</a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal"><i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>Logout</a>
-                        </div>
-                    </li>
-                </ul>
-            </nav>
-            <!-- End of Topbar -->
+            <hr class="sidebar-divider my-0">
 
-            <div class="container-fluid">
-                <h1 class="h3 mb-4 text-gray-800">Objects</h1>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('bucket.home') }}">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
 
-                <!-- Flash Alerts -->
-                <div id="flash-messages" class="position-fixed top-0 end-0 p-3" style="z-index: 1060;">
-                  {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                      {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} d-flex align-items-center justify-content-between shadow-lg rounded animate__animated animate__fadeInRight" role="alert">
-                          <div>
-                            {% if category == 'success' %}
-                              <i class="fas fa-check-circle me-2"></i>
-                            {% elif category == 'danger' %}
-                              <i class="fas fa-times-circle me-2"></i>
-                            {% elif category == 'warning' %}
-                              <i class="fas fa-exclamation-triangle me-2"></i>
-                            {% else %}
-                              <i class="fas fa-info-circle me-2"></i>
-                            {% endif %}
-                            {{ message }}
-                          </div>
-                        </div>
-                      {% endfor %}
-                    {% endif %}
-                  {% endwith %}
-                </div>
+            <hr class="sidebar-divider">
 
-                {% if not bucket_name %}
-                <!-- List Buckets as cards -->
-                <div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
-                    <div class="card-header py-3 bg-gradient-primary text-white">
-                        <h6 class="m-0 font-weight-bold">Bucket List</h6>
+            <div class="sidebar-heading">Interface</div>
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
+                   aria-expanded="true" aria-controls="collapseBuckets">
+                    <i class="fa fa-cubes" aria-hidden="true"></i>
+                    <span>Buckets</span>
+                </a>
+                <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">Buckets</a>
                     </div>
-                    <div class="card-body">
-                        <div class="row" id="bucketList">
-                            {% for bucket in buckets %}
-                            <div class="col-md-3 mb-3">
-                                <a href="{{ url_for('objects.list_objects', bucket_name=bucket.Name) }}" class="bucket-card text-decoration-none text-dark">
-                                    <div class="card h-100 shadow-sm border-0 animate__animated animate__zoomIn">
-                                        <div class="card-body text-center">
-                                            <i class="fas fa-hdd fa-3x mb-3"></i>
-                                            <h6 class="card-title">{{ bucket.Name }}</h6>
-                                        </div>
-                                    </div>
+                </div>
+            </li>
+
+            <li class="nav-item active">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseObjects"
+                   aria-expanded="true" aria-controls="collapseObjects">
+                    <i class="fas fa-database"></i>
+                    <span>Objects</span>
+                </a>
+                <div id="collapseObjects" class="collapse show" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item active" href="{{ url_for('objects.all_buckets') }}">Objects</a>
+                    </div>
+                </div>
+            </li>
+
+            {% if user_info.type == "Root Account" %}
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseUtilities"
+                    aria-expanded="true" aria-controls="collapseUtilities">
+                        <i class="fa fa-key" aria-hidden="true"></i>
+                    <span>IAM</span>
+                </a>
+                <div id="collapseUtilities" class="collapse" aria-labelledby="headingUtilities"
+                    data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('user.iam_users') }}">Users</a>
+                    </div>
+                </div>
+            </li>
+            {% endif %}
+
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <div class="sidebar-heading">User</div>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('user.profile') }}">
+                    <i class="fas fa-fw fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
+
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+
+        </ul>
+        <!-- End of Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+
+                <!-- Topbar (copied + adapted) -->
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+
+                    <!-- Topbar Navbar -->
+                    <ul class="navbar-nav ml-auto">
+
+                        <!-- User Information -->
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                    {{ user_info.UserName or "No Name" }}
+                                    {% if user_info.type %}
+                                        ({{ user_info.type }})
+                                    {% endif %}
+                                </span>
+                                <img class="img-profile rounded-circle" src="{{ url_for('static', filename='img/undraw_profile.svg') }}">
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="{{ url_for('user.profile') }}">
+                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i> Profile
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i> Logout
                                 </a>
                             </div>
-                            {% endfor %}
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                Show 
-                                <select id="bucketsPerPageSelect" class="form-control d-inline-block" style="width:auto;">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                </select>
-                                buckets
+                        </li>
+
+                    </ul>
+
+                </nav>
+                <!-- End of Topbar -->
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid">
+                    <h1 class="h3 mb-4 text-gray-800">Objects</h1>
+
+                    <!-- Flash Alerts -->
+                    <div id="flash-messages" class="position-fixed top-0 end-0 p-3" style="z-index: 1060;">
+                      {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                          {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} d-flex align-items-center justify-content-between shadow-lg rounded animate__animated animate__fadeInRight" role="alert">
+                              <div>
+                                {% if category == 'success' %}
+                                  <i class="fas fa-check-circle me-2"></i>
+                                {% elif category == 'danger' %}
+                                  <i class="fas fa-times-circle me-2"></i>
+                                {% elif category == 'warning' %}
+                                  <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% else %}
+                                  <i class="fas fa-info-circle me-2"></i>
+                                {% endif %}
+                                {{ message }}
+                              </div>
                             </div>
-                            <nav>
-                                <ul id="bucketsPagination" class="pagination mb-0"></ul>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <!-- Breadcrumb / Back to root -->
-                <div class="mb-3">
-                    <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name) }}" class="btn btn-secondary btn-sm"><i class="fas fa-home"></i> Root</a>
-                    {% if prefix %}
-                        {% set parts = prefix.rstrip('/').split('/') %}
-                        {% if parts|length > 1 %}
-                        <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix='/'.join(parts[:-1]) + '/') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+                          {% endfor %}
                         {% endif %}
-                    {% endif %}
-                </div>
-
-                <!-- Search -->
-                <div class="mb-3">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search folders and files...">
-                </div>
-
-                <!-- List Objects in Bucket -->
-                <div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
-                    <div class="card-header py-3 bg-gradient-primary text-white">
-                        <h6 class="m-0 font-weight-bold">Objects in {{ bucket_name }}</h6>
+                      {% endwith %}
                     </div>
-                    <div class="card-body">
-                        <!-- Upload Card -->
-                        <div class="card shadow-sm border-0 mb-4 animate__animated animate__fadeInUp">
-                          <div class="card-header bg-gradient-success text-white py-2">
-                            <h6 class="m-0 font-weight-bold"><i class="fas fa-upload"></i> Upload File</h6>
-                          </div>
-                          <div class="card-body">
-                            <form id="uploadForm" action="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix=prefix) }}" 
-                                  method="POST" enctype="multipart/form-data" class="form-inline">
-                              <div class="form-group mb-2 me-2">
-                                <input type="file" name="file" class="form-control-file" required>
-                              </div>
-                              <div class="form-group mb-2 me-2">
-                                <input type="text" name="folder" class="form-control" placeholder="Optional folder name">
-                              </div>
-                              <input type="hidden" name="prefix" value="{{ prefix }}">
-                              <button type="button" id="uploadBtn" class="btn btn-success mb-2">
-                                <i class="fas fa-cloud-upload-alt"></i> Upload
-                              </button>
-                            </form>
-                          </div>
+
+                    {% if not bucket_name %}
+                    <!-- List Buckets as cards -->
+                    <div class="mb-3">
+                        <input type="text" id="bucketSearchInput" class="form-control" placeholder="Search buckets...">
+                    </div>
+
+                    <div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
+                        <div class="card-header py-3 bg-gradient-primary text-white">
+                            <h6 class="m-0 font-weight-bold">Bucket List</h6>
                         </div>
-
-                        <table id="objectTable" class="table table-hover table-striped table-bordered align-middle text-center">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Size (Bytes)</th>
-                                    <th>Last Modified</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for folder in folders %}
-                                <tr class="folder-row animate__animated animate__fadeInLeft">
-                                    <td><i class="fas fa-folder folder-icon"></i> 
-                                        <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix=prefix + folder + '/') }}">{{ folder }}</a>
-                                    </td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                </tr>
+                        <div class="card-body">
+                            <div class="row" id="bucketList">
+                                {% for bucket in buckets %}
+                                <div class="col-md-3 mb-3">
+                                    <a href="{{ url_for('objects.list_objects', bucket_name=bucket.Name) }}" class="bucket-card text-decoration-none text-dark">
+                                        <div class="card h-100 shadow-sm border-0 animate__animated animate__zoomIn">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-hdd fa-3x mb-3"></i>
+                                                <h6 class="card-title">{{ bucket.Name }}</h6>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
                                 {% endfor %}
-                                {% for file in files %}
-                                <tr class="file-row animate__animated animate__fadeInRight">
-                                    <td><i class="fas fa-file file-icon"></i> {{ file.Key }}</td>
-                                    <td>{{ file.Size }}</td>
-                                    <td>{{ file.LastModified.strftime("%Y-%m-%d %H:%M:%S") if file.LastModified else '-' }}</td>
-                                    <td>
-                                        <a href="{{ url_for('objects.download_object', bucket_name=bucket_name, key=file.Key) }}" class="btn btn-sm btn-success" title="Download"><i class="fas fa-download"></i></a>
-                                        <form action="{{ url_for('objects.delete_object', bucket_name=bucket_name, key=file.Key) }}" method="POST" style="display:inline;" class="delete-form" data-key="{{ file.Key }}" data-prefix="{{ prefix }}">
-                                            <button type="button" class="btn btn-sm btn-danger deleteBtn" title="Delete"><i class="fas fa-trash"></i></button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                Show 
-                                <select id="rowsPerPageSelect" class="form-control d-inline-block" style="width:auto;">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                                entries
                             </div>
-                            <nav>
-                                <ul id="pagination" class="pagination mb-0"></ul>
-                            </nav>
-                        </div>
 
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    Show
+                                    <select id="bucketsPerPageSelect" class="form-control d-inline-block" style="width:auto;">
+                                        <option value="5">5</option>
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                    </select>
+                                    buckets
+                                </div>
+                                <nav>
+                                    <ul id="bucketsPagination" class="pagination mb-0"></ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <!-- Breadcrumb / Back to root -->
+                    <div class="mb-3">
+                        <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name) }}" class="btn btn-secondary btn-sm"><i class="fas fa-home"></i> Root</a>
+                        {% if prefix %}
+                            {% set parts = prefix.rstrip('/').split('/') %}
+                            {% if parts|length > 1 %}
+                            <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix='/'.join(parts[:-1]) + '/') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Upload Card -->
+                    <div class="card shadow-sm border-0 mb-4 animate__animated animate__fadeInUp">
+                      <div class="card-header bg-gradient-success text-white py-2">
+                        <h6 class="m-0 font-weight-bold"><i class="fas fa-upload"></i> Upload File</h6>
+                      </div>
+                      <div class="card-body">
+                        <div id="customAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                        <form id="uploadForm" action="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix=prefix) }}" 
+                              method="POST" enctype="multipart/form-data" class="form-inline">
+                          
+                          <div class="form-group mb-2 me-2">
+                            <input type="file" id="fileInput" name="file" class="form-control-file">
+                          </div>
+                          
+                          <div class="form-group mb-2 me-2">
+                            <input type="text" name="folder" class="form-control" placeholder="Optional folder name">
+                          </div>
+                          
+                          <input type="hidden" name="prefix" value="{{ prefix }}">
+                          
+                          <button type="button" id="uploadBtn" class="btn btn-success mb-2">
+                            <i class="fas fa-cloud-upload-alt"></i> Upload
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search folders and files...">
+                    </div>
+
+                    <!-- List Objects in Bucket -->
+                    <div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
+                        <div class="card-header py-3 bg-gradient-primary text-white">
+                            <h6 class="m-0 font-weight-bold">Objects in {{ bucket_name }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <table id="objectTable" class="table table-hover table-striped table-bordered align-middle text-center">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Size (Bytes)</th>
+                                        <th>Last Modified</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for folder in folders %}
+                                    <tr class="folder-row animate__animated animate__fadeInLeft">
+                                        <td><i class="fas fa-folder folder-icon"></i> 
+                                            <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix=prefix + folder + '/') }}">{{ folder }}</a>
+                                        </td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% for file in files %}
+                                    <tr class="file-row animate__animated animate__fadeInRight">
+                                        <td><i class="fas fa-file file-icon"></i> {{ file.Key }}</td>
+                                        <td>{{ file.Size }}</td>
+                                        <td>{{ file.LastModified.strftime("%Y-%m-%d %H:%M:%S") if file.LastModified else '-' }}</td>
+                                        <td>
+                                            <a href="{{ url_for('objects.download_object', bucket_name=bucket_name, key=file.Key) }}" class="btn btn-sm btn-success" title="Download"><i class="fas fa-download"></i></a>
+                                            <form action="{{ url_for('objects.delete_object', bucket_name=bucket_name, key=file.Key) }}" method="POST" style="display:inline;" class="delete-form" data-key="{{ file.Key }}" data-prefix="{{ prefix }}">
+                                                <button type="button" class="btn btn-sm btn-danger deleteBtn" title="Delete"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    Show 
+                                    <select id="rowsPerPageSelect" class="form-control d-inline-block" style="width:auto;">
+                                        <option value="5">5</option>
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    entries
+                                </div>
+                                <nav>
+                                    <ul id="pagination" class="pagination mb-0"></ul>
+                                </nav>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    {% endif %} <!-- end bucket_name condition -->
+
+                </div>
+                <!-- /.container-fluid -->
+
+            </div>
+            <!-- End of Main Content -->
+
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; Your Website 2020</span>
                     </div>
                 </div>
-                {% endif %}
+            </footer>
+            <!-- End of Footer -->
+
+        </div>
+        <!-- End of Content Wrapper -->
+
+    </div>
+    <!-- End of Page Wrapper -->
+
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+
+    <!-- Logout Modal-->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Logout</a>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modals: Logout / Upload Confirm / Delete -->
-<div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-gradient-secondary text-white">
-        <h5 class="modal-title">Logout</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">Are you sure you want to logout?</div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-primary">Logout</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Upload Confirm Modal -->
-<div class="modal fade" id="uploadConfirmModal" tabindex="-1" aria-labelledby="uploadConfirmModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-gradient-success text-white">
-        <h5 class="modal-title" id="uploadConfirmModalLabel"><i class="fas fa-upload"></i> Confirm Upload</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to upload <strong id="uploadFileName"></strong> to <strong id="uploadTargetPath"></strong>?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" id="confirmUploadBtn" class="btn btn-success">Upload</button>
+    <!-- Upload Confirm Modal -->
+    <div class="modal fade" id="uploadConfirmModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-gradient-success text-white">
+            <h5 class="modal-title"><i class="fas fa-upload"></i> Confirm Upload</h5>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to upload <strong id="uploadFileName"></strong> to <strong id="uploadTargetPath"></strong>?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <button type="button" id="confirmUploadBtn" class="btn btn-success">Upload</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Delete Confirm Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-gradient-danger text-white">
-        <h5 class="modal-title" id="deleteModalLabel"><i class="fas fa-trash"></i> Confirm Delete</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to delete <strong id="deleteFileName"></strong> from <strong id="deleteFilePath"></strong>?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    <!-- Delete Confirm Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-gradient-danger text-white">
+            <h5 class="modal-title"><i class="fas fa-trash"></i> Confirm Delete</h5>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to delete <strong id="deleteFileName"></strong> from <strong id="deleteFilePath"></strong>?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- JS -->
-<script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+    <!-- JS: jQuery -> Bootstrap -> Plugins -> Custom -->
+    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
 
-<script>
-// === Table & Bucket Pagination + Search + Flash Messages ===
-$(document).ready(function(){
-    // FILE TABLE PAGINATION
-    const $table = $("#objectTable"); const $rows = $table.find("tbody tr"); const $pagination = $("#pagination"); const $rowsPerPageSelect = $("#rowsPerPageSelect");
-    let currentPage = 1; let rowsPerPage = parseInt($rowsPerPageSelect.val());
-    function renderTable(){ const start=(currentPage-1)*rowsPerPage; const end=start+rowsPerPage; $rows.hide().slice(start,end).show(); renderPagination(); }
-    function renderPagination(){ const totalPages=Math.ceil($rows.length/rowsPerPage); $pagination.empty();
-        const prevLi=$('<li class="page-item"></li>'); if(currentPage===1) prevLi.addClass("disabled"); const prevA=$('<a class="page-link" href="#">«</a>');
-        prevA.click(function(e){ e.preventDefault(); if(currentPage>1){currentPage--; renderTable();} }); prevLi.append(prevA); $pagination.append(prevLi);
-        for(let i=1;i<=totalPages;i++){ const li=$('<li class="page-item"></li>'); if(i===currentPage) li.addClass("active"); const a=$('<a class="page-link" href="#">'+i+'</a>'); a.click(function(e){ e.preventDefault(); currentPage=i; renderTable(); }); li.append(a); $pagination.append(li); }
-        const nextLi=$('<li class="page-item"></li>'); if(currentPage===totalPages) nextLi.addClass("disabled"); const nextA=$('<a class="page-link" href="#">»</a>');
-        nextA.click(function(e){ e.preventDefault(); if(currentPage<totalPages){currentPage++; renderTable();} }); nextLi.append(nextA); $pagination.append(nextLi); }
-    renderTable();
-    $rowsPerPageSelect.change(function(){ rowsPerPage=parseInt($(this).val()); currentPage=1; renderTable(); });
+    <script>
+    $(document).ready(function(){
+        // FLASH DISMISS
+        setTimeout(function(){ $('.alert').fadeOut(600, function(){ $(this).remove(); }); }, 4000);
 
-    // SEARCH
-    $("#searchInput").on("keyup", function(){ const val=$(this).val().toLowerCase(); $rows.each(function(){ const $row=$(this); const text=$row.text().toLowerCase(); $row.toggle(text.indexOf(val)>-1); }); });
+        // -------------------------
+        // Objects table pagination + search
+        // -------------------------
+        const $table = $("#objectTable");
+        let $rows = $table.find("tbody tr");
+        const $pagination = $("#pagination");
+        const $rowsPerPageSelect = $("#rowsPerPageSelect");
+        let currentPage = 1;
+        let rowsPerPage = parseInt($rowsPerPageSelect.val() || 10);
 
-    // FLASH DISMISS
-    setTimeout(()=>{$(".alert").fadeOut(600,function(){$(this).remove();});},4000);
-});
+        function renderTable(filteredRows){
+            filteredRows = filteredRows || $rows.filter(function(){ return $(this).is(':visible') || true; });
+            // if filteredRows is jQuery set from search, use it; otherwise use all rows
+            if(filteredRows.length === 0 && $rows.length > 0){
+                // nothing matched — hide all and render empty pagination
+                $rows.hide();
+                renderPagination(filteredRows);
+                return;
+            }
+            const start = (currentPage-1)*rowsPerPage;
+            const end = start + rowsPerPage;
+            $rows.hide();
+            filteredRows.slice(start, end).show();
+            renderPagination(filteredRows);
+        }
 
-// === Upload Modal Logic ===
-const uploadBtn=document.getElementById("uploadBtn"); const uploadForm=document.getElementById("uploadForm");
-const uploadConfirmModal=new bootstrap.Modal(document.getElementById("uploadConfirmModal")); const uploadFileName=document.getElementById("uploadFileName"); const uploadTargetPath=document.getElementById("uploadTargetPath");
-uploadBtn.addEventListener("click",function(){
-    const fileInput=uploadForm.querySelector('input[name="file"]'); const folderInput=uploadForm.querySelector('input[name="folder"]'); if(!fileInput.files.length)return alert("Select a file first");
-    uploadFileName.textContent=fileInput.files[0].name; uploadTargetPath.textContent=folderInput.value || "/";
-    uploadConfirmModal.show();
-});
-document.getElementById("confirmUploadBtn").addEventListener("click",function(){ uploadForm.submit(); });
+        function renderPagination(filteredRows){
+            filteredRows = filteredRows || $rows;
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+            $pagination.empty();
 
-// === Delete Modal Logic ===
-let deleteForm=null; const deleteModal=new bootstrap.Modal(document.getElementById("deleteModal")); const deleteFileName=document.getElementById("deleteFileName"); const deleteFilePath=document.getElementById("deleteFilePath");
-document.querySelectorAll(".deleteBtn").forEach(btn=>{
-    btn.addEventListener("click",function(){
-        deleteForm=btn.closest(".delete-form"); deleteFileName.textContent=deleteForm.dataset.key; deleteFilePath.textContent=deleteForm.dataset.prefix||"/"; deleteModal.show();
+            const prevLi = $('<li class="page-item"></li>');
+            if(currentPage===1) prevLi.addClass("disabled");
+            const prevA = $('<a class="page-link" href="#">«</a>');
+            prevA.click(function(e){ e.preventDefault(); if(currentPage>1){ currentPage--; renderTable(filteredRows); }});
+            prevLi.append(prevA); $pagination.append(prevLi);
+
+            for(let i=1;i<=totalPages;i++){
+                const li = $('<li class="page-item"></li>');
+                if(i===currentPage) li.addClass("active");
+                const a = $('<a class="page-link" href="#">'+i+'</a>');
+                a.click(function(e){ e.preventDefault(); currentPage=i; renderTable(filteredRows); });
+                li.append(a); $pagination.append(li);
+            }
+
+            const nextLi = $('<li class="page-item"></li>');
+            if(currentPage===totalPages) nextLi.addClass("disabled");
+            const nextA = $('<a class="page-link" href="#">»</a>');
+            nextA.click(function(e){ e.preventDefault(); if(currentPage<totalPages){ currentPage++; renderTable(filteredRows); }});
+            nextLi.append(nextA); $pagination.append(nextLi);
+        }
+
+        renderTable($rows);
+
+        $rowsPerPageSelect.change(function(){
+            rowsPerPage = parseInt($(this).val());
+            currentPage = 1;
+            // if a search/filter is active, use filtered rows
+            const val = $("#searchInput").val();
+            if(val && val.length){
+                const $filteredRows = $rows.filter(function(){ return $(this).text().toLowerCase().indexOf(val.toLowerCase()) > -1; });
+                renderTable($filteredRows);
+            } else {
+                renderTable($rows);
+            }
+        });
+
+        $("#searchInput").on("keyup", function(){
+            const val = $(this).val().toLowerCase();
+            const $filteredRows = $rows.filter(function(){ return $(this).text().toLowerCase().indexOf(val) > -1; });
+            currentPage = 1;
+            renderTable($filteredRows);
+        });
+
+        // -------------------------
+        // Buckets cards pagination + search
+        // -------------------------
+        const $buckets = $("#bucketList > div");
+        const $bucketsPerPageSelect = $("#bucketsPerPageSelect");
+        const $bucketsPagination = $("#bucketsPagination");
+        let currentBucketPage = 1;
+        let bucketsPerPage = parseInt($bucketsPerPageSelect.val() || 10);
+
+        function renderBuckets(filtered){
+            filtered = filtered || $buckets;
+            const start = (currentBucketPage-1)*bucketsPerPage;
+            const end = start + bucketsPerPage;
+            $buckets.hide();
+            filtered.hide().slice(start, end).show();
+            renderBucketsPagination(filtered);
+        }
+
+        function renderBucketsPagination(filtered){
+            filtered = filtered || $buckets;
+            const totalPages = Math.max(1, Math.ceil(filtered.length / bucketsPerPage));
+            $bucketsPagination.empty();
+
+            const prevLi = $('<li class="page-item"></li>');
+            if(currentBucketPage === 1) prevLi.addClass("disabled");
+            const prevA = $('<a class="page-link" href="#">«</a>');
+            prevA.click(function(e){ e.preventDefault(); if(currentBucketPage > 1){ currentBucketPage--; renderBuckets(filtered); }});
+            prevLi.append(prevA); $bucketsPagination.append(prevLi);
+
+            for(let i=1;i<=totalPages;i++){
+                const li = $('<li class="page-item"></li>');
+                if(i===currentBucketPage) li.addClass("active");
+                const a = $('<a class="page-link" href="#">'+i+'</a>');
+                a.click(function(e){ e.preventDefault(); currentBucketPage=i; renderBuckets(filtered); });
+                li.append(a); $bucketsPagination.append(li);
+            }
+
+            const nextLi = $('<li class="page-item"></li>');
+            if(currentBucketPage === totalPages) nextLi.addClass("disabled");
+            const nextA = $('<a class="page-link" href="#">»</a>');
+            nextA.click(function(e){ e.preventDefault(); if(currentBucketPage < totalPages){ currentBucketPage++; renderBuckets(filtered); }});
+            nextLi.append(nextA); $bucketsPagination.append(nextLi);
+        }
+
+        renderBuckets();
+
+        $bucketsPerPageSelect.change(function(){
+            bucketsPerPage = parseInt($(this).val());
+            currentBucketPage = 1;
+            renderBuckets();
+        });
+
+        $("#bucketSearchInput").on("keyup", function(){
+            const val = $(this).val().toLowerCase();
+            const $filteredBuckets = $buckets.filter(function(){
+                const name = $(this).find("h6.card-title").text().toLowerCase();
+                return name.indexOf(val) > -1;
+            });
+            currentBucketPage = 1;
+            renderBuckets($filteredBuckets);
+        });
+
+        // -------------------------
+        // Upload modal logic (Bootstrap 4: use .modal())
+        // -------------------------
+        $("#uploadBtn").click(function(){
+            const fileInput = $("#fileInput")[0];
+            const folderInput = $('input[name="folder"]').val();
+
+            if(!fileInput || !fileInput.files || !fileInput.files.length){
+                $("#customAlert").text("Please select a file before uploading.").removeClass("d-none").addClass("show");
+                return;
+            }
+
+            $("#customAlert").addClass("d-none").removeClass("show");
+            $("#uploadFileName").text(fileInput.files[0].name);
+            $("#uploadTargetPath").text(folderInput || "/");
+            $("#uploadConfirmModal").modal("show");
+        });
+
+        $("#confirmUploadBtn").click(function(){
+            $("#uploadForm").submit();
+        });
+
+        // -------------------------
+        // Delete modal logic
+        // -------------------------
+        let deleteForm = null;
+        $(".deleteBtn").on("click", function(){
+            deleteForm = $(this).closest(".delete-form");
+            $("#deleteFileName").text(deleteForm.data("key"));
+            $("#deleteFilePath").text(deleteForm.data("prefix") || "/");
+            $("#deleteModal").modal("show");
+        });
+
+        $("#confirmDeleteBtn").click(function(){
+            if(deleteForm) deleteForm.submit();
+        });
+
     });
-});
-document.getElementById("confirmDeleteBtn").addEventListener("click",function(){ if(deleteForm)deleteForm.submit(); });
-</script>
+    </script>
+
 </body>
 </html>
