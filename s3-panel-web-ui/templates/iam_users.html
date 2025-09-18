@@ -174,6 +174,10 @@
                      <div class="card-header py-3 bg-gradient-primary text-white">
                         <h6 class="m-0 font-weight-bold">Users List</h6>
                      </div>
+                     <div class="mt-3 mb-2">
+    <input type="text" id="searchUserInput" class="form-control" placeholder="Search by UserName...">
+</div>
+
                      <div class="card-body">
                         <div class="table-responsive">
                            <table id="iamUsersTable" class="table table-hover table-striped table-bordered align-middle text-center">
@@ -568,80 +572,106 @@
             </div>
          </div>
       </div>
-      <script>
-         $(document).ready(function () {
-             const $table = $("#iamUsersTable");
-             const $rows = $table.find("tbody tr");
-             const $pagination = $("#pagination");
-             const $rowsPerPageSelect = $("#rowsPerPageSelect");
-         
-             let currentPage = 1;
-             let rowsPerPage = parseInt($rowsPerPageSelect.val());
-         
-             function renderTable() {
-                 const start = (currentPage - 1) * rowsPerPage;
-                 const end = start + rowsPerPage;
-                 $rows.hide().slice(start, end).show();
-                 renderPagination();
-             }
-         
-             function renderPagination() {
-                 const totalPages = Math.ceil($rows.length / rowsPerPage);
-                 $pagination.empty();
-         
-                 // Previous
-                 const prevLi = $('<li class="page-item"></li>');
-                 if (currentPage === 1) prevLi.addClass("disabled");
-                 const prevA = $('<a class="page-link" href="#">«</a>');
-                 prevA.click(function(e){
-                     e.preventDefault();
-                     if(currentPage > 1){
-                         currentPage--;
-                         renderTable();
-                     }
-                 });
-                 prevLi.append(prevA);
-                 $pagination.append(prevLi);
-         
-                 // Page numbers
-                 for(let i = 1; i <= totalPages; i++){
-                     const li = $('<li class="page-item"></li>');
-                     if(i === currentPage) li.addClass("active");
-                     const a = $('<a class="page-link" href="#">'+i+'</a>');
-                     a.click(function(e){
-                         e.preventDefault();
-                         currentPage = i;
-                         renderTable();
-                     });
-                     li.append(a);
-                     $pagination.append(li);
-                 }
-         
-                 // Next
-                 const nextLi = $('<li class="page-item"></li>');
-                 if (currentPage === totalPages) nextLi.addClass("disabled");
-                 const nextA = $('<a class="page-link" href="#">»</a>');
-                 nextA.click(function(e){
-                     e.preventDefault();
-                     if(currentPage < totalPages){
-                         currentPage++;
-                         renderTable();
-                     }
-                 });
-                 nextLi.append(nextA);
-                 $pagination.append(nextLi);
-             }
-         
-             $rowsPerPageSelect.change(function(){
-                 rowsPerPage = parseInt($(this).val());
-                 currentPage = 1;
-                 renderTable();
-             });
-         
-             // Initialize
-             renderTable();
-         });
-      </script>
+<script>
+$(document).ready(function () {
+    const $table = $("#iamUsersTable");
+    const $rows = $table.find("tbody tr");
+    const $pagination = $("#pagination");
+    const $rowsPerPageSelect = $("#rowsPerPageSelect");
+
+    let currentPage = 1;
+    let rowsPerPage = parseInt($rowsPerPageSelect.val());
+
+    function renderTable() {
+        // فقط ردیف‌هایی که visible هستند رو برای pagination حساب کن
+        const visibleRows = $rows.filter(function() {
+            return $(this).is(":visible") || $("#searchUserInput").val() === "";
+        });
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        $rows.hide(); // اول همه ردیف‌ها رو hide کن
+        visibleRows.slice(start, end).show(); // فقط slice روی ردیف‌های visible
+
+        renderPagination(visibleRows.length);
+    }
+
+    function renderPagination(totalRows) {
+        const totalPages = Math.ceil(totalRows / rowsPerPage);
+        $pagination.empty();
+
+        // Previous
+        const prevLi = $('<li class="page-item"></li>');
+        if (currentPage === 1) prevLi.addClass("disabled");
+        const prevA = $('<a class="page-link" href="#">«</a>');
+        prevA.click(function(e){
+            e.preventDefault();
+            if(currentPage > 1){
+                currentPage--;
+                renderTable();
+            }
+        });
+        prevLi.append(prevA);
+        $pagination.append(prevLi);
+
+        // Page numbers
+        for(let i = 1; i <= totalPages; i++){
+            const li = $('<li class="page-item"></li>');
+            if(i === currentPage) li.addClass("active");
+            const a = $('<a class="page-link" href="#">'+i+'</a>');
+            a.click(function(e){
+                e.preventDefault();
+                currentPage = i;
+                renderTable();
+            });
+            li.append(a);
+            $pagination.append(li);
+        }
+
+        // Next
+        const nextLi = $('<li class="page-item"></li>');
+        if (currentPage === totalPages) nextLi.addClass("disabled");
+        const nextA = $('<a class="page-link" href="#">»</a>');
+        nextA.click(function(e){
+            e.preventDefault();
+            if(currentPage < totalPages){
+                currentPage++;
+                renderTable();
+            }
+        });
+        nextLi.append(nextA);
+        $pagination.append(nextLi);
+    }
+
+    $rowsPerPageSelect.change(function(){
+        rowsPerPage = parseInt($(this).val());
+        currentPage = 1;
+        renderTable();
+    });
+
+    // -------- Search User by UserName --------
+    $("#searchUserInput").on("keyup", function() {
+        const value = $(this).val().toLowerCase();
+
+        $rows.each(function() {
+            const username = $(this).find("td:first").text().toLowerCase();
+            if (username.includes(value)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+
+        currentPage = 1;
+        renderTable();
+    });
+
+    // Initialize
+    renderTable();
+});
+</script>
+
       <script>
          document.getElementById("createKeyBtn").addEventListener("click", async function() {
              const username = document.getElementById("modalUsername").innerText;
