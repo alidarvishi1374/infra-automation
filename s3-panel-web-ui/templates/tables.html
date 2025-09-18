@@ -140,12 +140,12 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
 <li class="nav-item active">
-    <a class="nav-link collapsed " href="#" data-toggle="collapse" data-target="#collapseBuckets"
+    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
         aria-expanded="true" aria-controls="collapseBuckets">
         <i class="fa fa-cubes active" aria-hidden="true"></i>
         <span>Buckets</span>
     </a>
-    <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
+    <div id="collapseBuckets" class="collapse show" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
         <div class="bg-white py-2 collapse-inner rounded">
             <a class="collapse-item active" href="{{ url_for('bucket.buckets') }}">Buckets</a>
         </div>
@@ -177,14 +177,7 @@
                 <div id="collapseUtilities" class="collapse" aria-labelledby="headingUtilities"
                     data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Users:</h6>
                         <a class="collapse-item" href="{{ url_for('user.iam_users') }}">Users</a>
-                    </div>
-                </div>
-                <div id="collapseUtilities" class="collapse" aria-labelledby="headingUtilities"
-                    data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Groups:</h6>
                         <a class="collapse-item" href="{{ url_for('iam_groups.iam_groups') }}">Groups</a>
                     </div>
                 </div>
