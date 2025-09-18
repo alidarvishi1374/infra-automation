@@ -142,6 +142,11 @@
                     </button>
                 </div>
 
+                <div class="mb-3">
+    <input type="text" id="searchGroupsInput" class="form-control" placeholder="Search groups...">
+</div>
+
+
                 <!-- Groups Table -->
                 <div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
                     <div class="card-header py-3 bg-gradient-primary text-white">
@@ -314,6 +319,49 @@ $(document).ready(function() {
     });
 
     renderTable();
+
+// جستجوی گروه‌ها
+$("#searchGroupsInput").on("input", function() {
+    const query = $(this).val().toLowerCase();
+
+    $rows.each(function() {
+        const groupName = $(this).find("td:first").text().toLowerCase();
+        if (groupName.includes(query)) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+
+    // بعد از فیلتر، رندر pagination مجدد
+    const visibleRows = $rows.filter(":visible");
+    const totalPages = Math.ceil(visibleRows.length / rowsPerPage);
+    $pagination.empty();
+
+    const prevLi = $('<li class="page-item"></li>');
+    if (currentPage === 1) prevLi.addClass("disabled");
+    const prevA = $('<a class="page-link" href="#">«</a>');
+    prevA.click(e => { e.preventDefault(); if(currentPage>1){currentPage--; renderTable();} });
+    prevLi.append(prevA);
+    $pagination.append(prevLi);
+
+    for(let i=1;i<=totalPages;i++){
+        const li = $('<li class="page-item"></li>');
+        if(i===currentPage) li.addClass("active");
+        const a = $('<a class="page-link" href="#">'+i+'</a>');
+        a.click(e=>{e.preventDefault(); currentPage=i; renderTable();});
+        li.append(a);
+        $pagination.append(li);
+    }
+
+    const nextLi = $('<li class="page-item"></li>');
+    if(currentPage===totalPages) nextLi.addClass("disabled");
+    const nextA = $('<a class="page-link" href="#">»</a>');
+    nextA.click(e=>{e.preventDefault(); if(currentPage<totalPages){currentPage++; renderTable();}});
+    nextLi.append(nextA);
+    $pagination.append(nextLi);
+});
+
 
     // Create Group AJAX
 $("#createGroupForm").submit(function(e){
