@@ -114,6 +114,16 @@
     </div>
 </li>
 
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseS3select">
+<i class="fas fa-table"></i><span>S3select</span>
+      </a>
+      <div id="collapseS3select" class="collapse">
+        <div class="bg-white py-2 collapse-inner rounded">
+          <a class="collapse-item" href="{{ url_for('s3_select.s3_select_page') }}">S3select</a>
+        </div>
+      </div>
+    </li>
             <!-- Nav Item - Utilities Collapse Menu -->
             {% if user_info.type == "Root Account" %}
             <li class="nav-item">
