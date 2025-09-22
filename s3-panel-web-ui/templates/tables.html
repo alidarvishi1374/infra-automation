@@ -1224,7 +1224,7 @@ $(document).ready(function(){
       .catch(err => {
         console.error("Error loading replication rules:", err);
         document.getElementById("replicationJson").value = "Error loading rules";
-        showAlert("❌ خطا در بارگذاری قوانین!", "danger");
+        showAlert("❌ Error loading rules", "danger");
       });
   }
 
@@ -1245,7 +1245,7 @@ $(document).ready(function(){
       body: JSON.stringify({
         bucket_name: currentBucketName,
         replication: {
-          Role: "",  // حتماً اینو به ARN واقعی Role تغییر بده
+          Role: "", 
           Rules: rules
         }
       })
@@ -1255,7 +1255,6 @@ $(document).ready(function(){
       if(result.success) {
         showAlert(result.message || "✅ Rules saved successfully!", "success");
         $('#replicationModal').modal('hide');
-        // بعد از ۱ ثانیه صفحه رو رفرش می‌کنه تا تغییرات نمایش داده شوند
         setTimeout(() => { location.reload(); }, 1000);
       } else {
         showAlert(result.message || "❌ Error saveiing rules", "danger");
@@ -1266,7 +1265,6 @@ $(document).ready(function(){
     });
   });
 
-  // تابع نمایش Alert خوشگل
   function showAlert(message, type = "success") {
     const alertId = "alert-" + Date.now();
     const alertHtml = `
