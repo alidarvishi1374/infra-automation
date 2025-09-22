@@ -1258,7 +1258,7 @@ $(document).ready(function(){
         // بعد از ۱ ثانیه صفحه رو رفرش می‌کنه تا تغییرات نمایش داده شوند
         setTimeout(() => { location.reload(); }, 1000);
       } else {
-        showAlert(result.message || "❌ خطا در ذخیره قوانین!", "danger");
+        showAlert(result.message || "❌ Error saveiing rules", "danger");
       }
     })
     .catch(err => {
