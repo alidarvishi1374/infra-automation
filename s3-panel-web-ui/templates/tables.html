@@ -355,6 +355,12 @@
 <button class="btn btn-info policy-btn" data-bucket="{{ bucket.Name }}">Policy</button>
 <button class="btn btn-warning lifecycle-btn" data-bucket="{{ bucket.Name }}">Lifecycle</button>
 
+<button class="btn btn-sm btn-action btn-outline-success replication-btn" 
+        onclick="openReplicationModal('{{ bucket.Name }}')">
+  <i class="fas fa-random"></i> Replication Rule
+</button>
+
+
 
 
     </div>
@@ -1168,6 +1174,121 @@ $(document).ready(function(){
 });
 </script>
 
+<!-- Replication Rule Modal -->
+<div class="modal fade" id="replicationModal" tabindex="-1" role="dialog" aria-labelledby="replicationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="replicationModalLabel"><i class="fas fa-random"></i> Replication Rules</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="replicationForm">
+          <div class="form-group">
+            <label for="replicationJson">Replication JSON</label>
+            <textarea class="form-control" id="replicationJson" rows="10" placeholder='{ "Rules": [...] }'></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success btn-sm" id="applyReplicationBtn">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alert Container -->
+<div id="alertContainer" class="position-fixed" style="top: 20px; right: 20px; z-index: 1050; width: 350px;"></div>
+
+<script>
+  let currentBucketName = "";
+
+  // باز کردن مودال و بارگذاری قوانین
+  function openReplicationModal(bucketName) {
+    currentBucketName = bucketName;
+    $('#replicationModal').modal('show');
+
+    fetch(`/get_bucket_replication?bucket_name=${bucketName}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.replication && data.replication.Rules) {
+          document.getElementById("replicationJson").value =
+            JSON.stringify(data.replication.Rules, null, 2);
+        } else {
+          document.getElementById("replicationJson").value = "[]";
+        }
+      })
+      .catch(err => {
+        console.error("Error loading replication rules:", err);
+        document.getElementById("replicationJson").value = "Error loading rules";
+        showAlert("❌ خطا در بارگذاری قوانین!", "danger");
+      });
+  }
+
+  // ذخیره تغییرات
+  document.getElementById("applyReplicationBtn").addEventListener("click", function () {
+    let rulesText = document.getElementById("replicationJson").value;
+    let rules = [];
+    try {
+      rules = JSON.parse(rulesText);
+    } catch (e) {
+      showAlert("❌ Invalid Json", "danger");
+      return;
+    }
+
+    fetch("/apply_replication_rule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bucket_name: currentBucketName,
+        replication: {
+          Role: "",  // حتماً اینو به ARN واقعی Role تغییر بده
+          Rules: rules
+        }
+      })
+    })
+    .then(res => res.json())
+    .then(result => {
+      if(result.success) {
+        showAlert(result.message || "✅ Rules saved successfully!", "success");
+        $('#replicationModal').modal('hide');
+        // بعد از ۱ ثانیه صفحه رو رفرش می‌کنه تا تغییرات نمایش داده شوند
+        setTimeout(() => { location.reload(); }, 1000);
+      } else {
+        showAlert(result.message || "❌ خطا در ذخیره قوانین!", "danger");
+      }
+    })
+    .catch(err => {
+      showAlert("❌ Error saving rules: " + err, "danger");
+    });
+  });
+
+  // تابع نمایش Alert خوشگل
+  function showAlert(message, type = "success") {
+    const alertId = "alert-" + Date.now();
+    const alertHtml = `
+      <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show shadow-lg" role="alert">
+        ${message}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>`;
+
+    const container = document.getElementById("alertContainer");
+    container.insertAdjacentHTML("beforeend", alertHtml);
+
+    // بعد از ۵ ثانیه خودش بسته بشه
+    setTimeout(() => {
+      const alertEl = document.getElementById(alertId);
+      if (alertEl) {
+        $(alertEl).alert('close');
+      }
+    }, 5000);
+  }
+</script>
 
 
 </body>

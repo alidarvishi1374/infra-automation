@@ -380,4 +380,67 @@ def delete_bucket_lifecycle():
         if code in ("NoSuchLifecycleConfiguration", "NoSuchBucket"):
             return jsonify({"success": True, "message": "Lifecycle does not exist"})
         return jsonify({"success": False, "message": str(e)}), 400
+    
 
+@bucket_bp.route("/apply_replication_rule", methods=["POST"])
+@login_required
+def apply_replication_rule():
+    """
+    Apply replication configuration to a bucket.
+    Expects JSON: {
+        "bucket_name": "example-bucket",
+        "replication": { ... }   # full replication configuration JSON
+    }
+    """
+    data = request.get_json(silent=True) or {}
+    bucket_name = data.get("bucket_name")
+    replication_config = data.get("replication")
+
+    if not bucket_name or not replication_config:
+        return jsonify({"success": False, "message": "❌ bucket_name and replication config are required."}), 400
+
+    s3 = get_s3_client()
+    try:
+        s3.put_bucket_replication(
+            Bucket=bucket_name,
+            ReplicationConfiguration=replication_config
+        )
+        # refresh cache
+        session.pop("buckets_info", None)
+        return jsonify({"success": True, "message": f"✅ Replication rule applied to {bucket_name}"})
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = e.response.get("Error", {}).get("Message", str(e))
+        return jsonify({"success": False, "message": f"❌ {error_code}: {error_msg}"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500
+
+
+@bucket_bp.route("/get_bucket_replication", methods=["POST", "GET"])
+@login_required
+def get_bucket_replication():
+    """
+    Get replication configuration of a bucket.
+    Supports both GET (query param) and POST (json body).
+    """
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        bucket_name = data.get("bucket_name")
+    else:
+        bucket_name = request.args.get("bucket_name")
+
+    if not bucket_name:
+        return jsonify({"success": False, "message": "❌ Bucket name is required."}), 400
+
+    s3 = get_s3_client()
+    try:
+        resp = s3.get_bucket_replication(Bucket=bucket_name)
+        replication = resp.get("ReplicationConfiguration", {})
+        return jsonify({"success": True, "replication": replication})
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "")
+        if code in ("ReplicationConfigurationNotFoundError", "NoSuchReplicationConfiguration", "404"):
+            return jsonify({"success": True, "replication": {}})
+        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500

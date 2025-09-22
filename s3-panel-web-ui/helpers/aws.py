@@ -108,9 +108,10 @@ def get_buckets_info():
         # Replication
         try:
             replication = s3_client.get_bucket_replication(Bucket=bucket_name)
-            bucket_data["Replication"] = bool(replication.get("ReplicationConfiguration", {}).get("Role"))
+            bucket_data["Replication"] = replication.get("ReplicationConfiguration", {})
         except:
-            bucket_data["Replication"] = False
+            bucket_data["Replication"] = None
+
 
         # Encryption
         try:
