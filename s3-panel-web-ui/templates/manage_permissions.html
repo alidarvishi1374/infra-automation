@@ -1,0 +1,55 @@
+<!-- templates/manage_permissions.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Manage Assume Permissions</title>
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+</head>
+<body>
+<h1>مدیریت Assume Permission</h1>
+
+{% for role in roles %}
+  <h3>{{ role.role_name }} ({{ role.role_arn }})</h3>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+      <th>User ARN</th>
+      <th>Permission</th>
+      <th>Action</th>
+    </tr>
+    {% for user in role.users %}
+    <tr id="{{ role.role_arn }}-{{ user }}">
+      <td>{{ user }}</td>
+      <td class="perm">{{ role.assume_permission[user] }}</td>
+      <td>
+        <button onclick="togglePermission('{{ role.role_arn }}','{{ user }}')">Toggle</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+{% endfor %}
+
+<script>
+function togglePermission(role_arn, user_arn) {
+    let row = document.getElementById(role_arn + '-' + user_arn);
+    let current = row.querySelector(".perm").innerText;
+    let newValue = current === "yes" ? "no" : "yes";
+
+    $.ajax({
+        url: "/update_permission",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({role_arn: role_arn, user_arn: user_arn, value: newValue}),
+        success: function(resp){
+            if(resp.status === "success") {
+                row.querySelector(".perm").innerText = newValue;
+            } else {
+                alert("Error: " + resp.message);
+            }
+        }
+    });
+}
+</script>
+
+</body>
+</html>
