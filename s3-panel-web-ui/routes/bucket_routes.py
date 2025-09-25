@@ -19,6 +19,7 @@ def home():
 @bucket_bp.route("/buckets")
 @login_required
 def buckets():
+    session.pop("buckets_info", None)
     buckets_info = get_buckets_info()
     user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
     return render_template("tables.html", buckets=buckets_info, user_info=user_info)
@@ -49,15 +50,17 @@ def create_bucket_route():
     data = request.get_json()
     bucket_name = data.get("bucket_name")
     region = data.get("region", "us-east-1")
+    enable_locking = data.get("enable_locking", False)
 
-    result = create_bucket(
-        session["endpoint_url"],
-        session["access_key"],
-        session["secret_key"],
-        bucket_name,
-        region
-    )
-    return jsonify(result)
+    endpoint = session.get("endpoint_url")
+    access_key = session.get("access_key")
+    secret_key = session.get("secret_key")
+
+    # صدا زدن تابع موجود در aws.py
+    response = create_bucket(endpoint, access_key, secret_key, bucket_name, region, enable_locking)
+    
+    return jsonify(response)
+
 
 
 @bucket_bp.route("/delete_bucket", methods=["POST"])
@@ -442,5 +445,62 @@ def get_bucket_replication():
         if code in ("ReplicationConfigurationNotFoundError", "NoSuchReplicationConfiguration", "404"):
             return jsonify({"success": True, "replication": {}})
         return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500
+@bucket_bp.route("/configure_locking", methods=["POST"])
+@login_required
+def configure_locking():
+    """
+    Configure object lock for an existing bucket.
+    Expects JSON: {
+        "bucket": "example-bucket",
+        "mode": "GOVERNANCE" or "COMPLIANCE",
+        "days": 30
+    }
+    """
+    data = request.get_json(silent=True) or {}
+    bucket = data.get("bucket")
+    mode = data.get("mode")
+    days = data.get("days")
+
+    if not bucket or not mode or not days:
+        return jsonify({"success": False, "message": "Bucket name, mode and days are required."}), 400
+
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Days must be a valid integer."}), 400
+
+    s3 = get_s3_client()
+
+    try:
+        # ساخت dictionary برای retention configuration
+        lock_config = {
+            "ObjectLockEnabled": "Enabled",
+            "Rule": {
+                "DefaultRetention": {
+                    "Mode": mode,
+                    "Days": days
+                }
+            }
+        }
+
+        s3.put_object_lock_configuration(
+            Bucket=bucket,
+            ObjectLockConfiguration=lock_config
+        )
+
+        # پاک کردن cache session
+        session.pop("buckets_info", None)
+
+        return jsonify({
+            "success": True,
+            "message": f"✅ Locking configured: {mode} for {days} days on {bucket}"
+        })
+
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "Unknown")
+        msg = e.response.get("Error", {}).get("Message", str(e))
+        return jsonify({"success": False, "message": f"❌ {code}: {msg}"}), 400
     except Exception as e:
         return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500

@@ -503,9 +503,13 @@ $(document).on("click", ".delete-group-btn", function() {
   </div>
 </div>
 
+<script id="allUsersData" type="application/json">
+{{ all_users | tojson }}
+</script>
+
 
 <script>
-let allUsers = []; // VSCode خوشحال میشه
+let allUsers = JSON.parse(document.getElementById('allUsersData').textContent);
 let pendingAdds = [];
 let pendingRemoves = [];
 

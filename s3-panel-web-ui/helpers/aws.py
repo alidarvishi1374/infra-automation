@@ -336,8 +336,18 @@ def delete_iam_user(endpoint, access_key, secret_key, user_name, region="us-east
             "message": f"❌ Unexpected error: {str(e)}"
         }
 
-def create_bucket(endpoint, access_key, secret_key, bucket_name, region="us-east-1"):
-    """Create a new S3 bucket with pre-check"""
+def create_bucket(endpoint, access_key, secret_key, bucket_name, region="us-east-1", enable_locking=False):
+    """
+    Create a new S3 bucket with optional Object Lock enabled.
+    
+    :param endpoint: S3 endpoint URL
+    :param access_key: AWS access key
+    :param secret_key: AWS secret key
+    :param bucket_name: Name of the bucket to create
+    :param region: Bucket region (default: us-east-1)
+    :param enable_locking: If True, enables Object Lock on bucket creation
+    :return: dict with success status and message
+    """
     s3 = boto3.client(
         "s3",
         aws_access_key_id=access_key,
@@ -345,7 +355,9 @@ def create_bucket(endpoint, access_key, secret_key, bucket_name, region="us-east
         endpoint_url=endpoint,
         region_name=region
     )
+
     try:
+        # Pre-check: verify bucket doesn't already exist
         try:
             s3.head_bucket(Bucket=bucket_name)
             return {
@@ -356,20 +368,35 @@ def create_bucket(endpoint, access_key, secret_key, bucket_name, region="us-east
             if e.response["Error"]["Code"] not in ["404", "NoSuchBucket"]:
                 return {"success": False, "message": f"❌ Pre-check failed: {e}"}
 
+        # Create bucket with optional Object Lock
         if region in [None, "", "us-east-1", "default"]:
-            response = s3.create_bucket(Bucket=bucket_name)
+            if enable_locking:
+                response = s3.create_bucket(
+                    Bucket=bucket_name,
+                    ObjectLockEnabledForBucket=True
+                )
+            else:
+                response = s3.create_bucket(Bucket=bucket_name)
         else:
-            response = s3.create_bucket(
-                Bucket=bucket_name,
-                CreateBucketConfiguration={"LocationConstraint": region}
-            )
+            if enable_locking:
+                response = s3.create_bucket(
+                    Bucket=bucket_name,
+                    CreateBucketConfiguration={"LocationConstraint": region},
+                    ObjectLockEnabledForBucket=True
+                )
+            else:
+                response = s3.create_bucket(
+                    Bucket=bucket_name,
+                    CreateBucketConfiguration={"LocationConstraint": region}
+                )
 
         status_code = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
         if status_code == 200:
-            return {
-                "success": True,
-                "message": f"✅ Bucket '{bucket_name}' created successfully!"
-            }
+            msg = f"✅ Bucket '{bucket_name}' created successfully!"
+            if enable_locking:
+                msg += " Object Locking is enabled."
+            return {"success": True, "message": msg}
+
         return {
             "success": False,
             "message": f"❌ Failed to create bucket '{bucket_name}' (HTTP {status_code})."

@@ -360,6 +360,12 @@
   <i class="fas fa-random"></i> Replication Rule
 </button>
 
+<button class="btn btn-sm btn-action btn-outline-primary object-locking-btn" 
+        data-bucket="{{ bucket.Name }}">
+    <i class="fas fa-lock"></i> Locking
+</button>
+
+
 
 
 
@@ -460,7 +466,7 @@
           <div class="form-group">
             <label for="bucketRegion">Region</label>
             <select class="form-control" id="bucketRegion">
-                <option value="default" selected>Default</option>
+              <option value="default" selected>Default</option>
               <option value="us-east-1">US East (N. Virginia)</option>
               <option value="us-west-1">US West (N. California)</option>
               <option value="us-west-2">US West (Oregon)</option>
@@ -468,6 +474,11 @@
               <option value="ap-south-1">Asia Pacific (Mumbai)</option>
             </select>
           </div>
+          <div class="form-group form-check">
+            <input type="checkbox" class="form-check-input" id="bucketLocking">
+            <label class="form-check-label" for="bucketLocking">Enable Object Locking</label>
+        </div>
+
         </form>
       </div>
       <div class="modal-footer">
@@ -483,6 +494,7 @@ $(document).ready(function () {
     $("#confirmCreateBucketBtn").click(function () {
         const bucketName = $("#bucketName").val().trim();
         const region = $("#bucketRegion").val();
+        const enableLocking = $("#bucketLocking").is(":checked");
 
         if (!bucketName) {
             showCustomAlert("❌ Please enter a bucket name.", "danger");
@@ -492,7 +504,9 @@ $(document).ready(function () {
         fetch("/create_bucket", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bucket_name: bucketName, region })
+            body: JSON.stringify({ bucket_name: bucketName, region }),
+            body: JSON.stringify({ bucket_name: bucketName, region, enable_locking: enableLocking })
+
         })
         .then(res => res.json())
         .then(data => {
@@ -1287,6 +1301,113 @@ $(document).ready(function(){
     }, 5000);
   }
 </script>
+
+<!-- Object Locking Modal -->
+<div class="modal fade" id="objectLockingModal" tabindex="-1" role="dialog" aria-labelledby="objectLockingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-md modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="objectLockingModalLabel">
+          <i class="fas fa-lock"></i> Configure Object Locking for <span id="lockingBucketName"></span>
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="objectLockingForm">
+          <div class="form-group">
+            <label for="lockingMode">Mode</label>
+            <select class="form-control" id="lockingMode">
+              <option value="GOVERNANCE">Governance</option>
+              <option value="COMPLIANCE">Compliance</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="retentionDays">Retention Days</label>
+            <input type="number" class="form-control" id="retentionDays" placeholder="Enter number of days" min="1">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="saveLockingBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    let currentLockingBucket = null;
+
+    // باز کردن مودال با اطلاعات باکت
+    $(".object-locking-btn").click(function() {
+        currentLockingBucket = $(this).data("bucket");
+        $("#lockingBucketName").text(currentLockingBucket);
+
+        // مقداردهی پیش‌فرض
+        $("#lockingMode").val("GOVERNANCE");
+        $("#retentionDays").val("");
+
+        $("#objectLockingModal").modal("show");
+    });
+
+    // ذخیره تغییرات و ارسال به سرور
+    $("#saveLockingBtn").click(function() {
+        const mode = $("#lockingMode").val();
+        const days = parseInt($("#retentionDays").val());
+
+        if(!days || days <= 0) {
+            showCustomAlert("Please enter a valid number of days", "danger");
+            return;
+        }
+
+        const payload = {
+            bucket: currentLockingBucket,
+            mode: mode,
+            days: days
+        };
+
+        fetch("/configure_locking", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                showCustomAlert(`Object Locking updated for ${currentLockingBucket}: Mode=${mode}, Days=${days}`, "success");
+                $("#objectLockingModal").modal("hide");
+            } else {
+                showCustomAlert(data.message || "Error updating Object Locking", "danger");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showCustomAlert("Server error", "danger");
+        });
+    });
+
+    // تابع نمایش alert سفارشی
+    function showCustomAlert(message, type="info") {
+        const alertId = `alert-${Date.now()}`;  // یه id یکتا برای هر alert
+        const alertHtml = `<div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+        </div>`;
+        $("#alertsContainer").append(alertHtml);
+
+        // حذف خودکار بعد از 3 ثانیه
+        setTimeout(() => {
+            $(`#${alertId}`).fadeOut(300, function() { $(this).remove(); });
+        }, 3000);
+    }
+
+});
+</script>
+
+<!-- کانتینر برای نمایش alert ها -->
+<div id="alertsContainer" style="position: fixed; top: 10px; right: 10px; z-index: 1050;"></div>
 
 
 </body>
