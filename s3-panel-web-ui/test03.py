@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import json
+from test import list_roles_and_users
 
 app = Flask(__name__)
 DB_FILE = "roles.db"
@@ -8,20 +9,34 @@ DB_FILE = "roles.db"
 def get_roles_and_users():
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
+
+    # گرفتن یوزرهای معتبر
+    cur.execute("SELECT user_arn FROM users")
+    valid_users = {row[0] for row in cur.fetchall()}
+
     cur.execute("SELECT role_arn, role_name, principal, assume_permission FROM roles")
     roles = []
     for row in cur.fetchall():
         role_arn, role_name, principal_json, assume_perm_json = row
         assume_perm = json.loads(assume_perm_json) if assume_perm_json else {}
-        users = list(assume_perm.keys())
+        users = [u for u in assume_perm.keys() if u in valid_users]
+
+        if not users:
+            continue
+
         roles.append({
             "role_arn": role_arn,
             "role_name": role_name,
             "users": users,
-            "assume_permission": assume_perm
+            "assume_permission": {u: assume_perm[u] for u in users}
         })
     conn.close()
     return roles
+
+@app.before_request
+def sync_roles():
+    # قبل از هر request، دیتابیس رو با endpoint سینک کن
+    list_roles_and_users()
 
 @app.route("/manage_permissions")
 def manage_permissions():
@@ -43,16 +58,12 @@ def update_permission():
         return jsonify({"status": "error", "message": "Role not found"}), 404
 
     assume_perm_json, assumed_users_json, assume_history_json = row
-
-    # مدیریت None یا رشته خالی
     assume_perm = json.loads(assume_perm_json) if assume_perm_json else {}
     assumed_users_list = json.loads(assumed_users_json) if assumed_users_json else []
     assume_history_list = json.loads(assume_history_json) if assume_history_json else []
 
-    # آپدیت permission
     assume_perm[user_arn] = value
 
-    # اگر yes شد، اطلاعات یوزر در assumed_users و assume_history پاک شود
     if value.lower() == "yes":
         if user_arn in assumed_users_list:
             assumed_users_list.remove(user_arn)
@@ -72,7 +83,6 @@ def update_permission():
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5002)

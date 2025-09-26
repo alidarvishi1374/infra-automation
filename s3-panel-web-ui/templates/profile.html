@@ -108,8 +108,20 @@
             </li>
             {% endif %}
 
+<li class="nav-item">
+    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSts"
+        aria-expanded="true" aria-controls="collapseSts">
+        <i class="fas fa-theater-masks"></i>
+        <span>STS</span>
+    </a>
+    <div id="collapseSts" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+            <a class="collapse-item" href="{{ url_for('manage.manage_sts_permissions') }}">Admin Permission</a>
+        </div>
+    </div>
+</li>
+
             <hr class="sidebar-divider">
-            <div class="sidebar-heading">User</div>
             <li class="nav-item active">
                 <a class="nav-link" href="{{ url_for('user.profile') }}">
                     <i class="fas fa-fw fa-user"></i>
