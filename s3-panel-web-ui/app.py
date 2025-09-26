@@ -6,6 +6,8 @@ from routes.groups_routes import iam_groups_bp
 from routes.objects import object_bp
 from routes.s3select import s3_select_bp
 from routes.manage_sts_permission import manage_bp
+from routes.manage_roles import manage_iam_bp
+from routes.assume_roles import assume_bp
 
 
 def create_app():
@@ -20,6 +22,8 @@ def create_app():
     app.register_blueprint(object_bp)
     app.register_blueprint(s3_select_bp)
     app.register_blueprint(manage_bp)
+    app.register_blueprint(manage_iam_bp)
+    app.register_blueprint(assume_bp)
     return app
 
 

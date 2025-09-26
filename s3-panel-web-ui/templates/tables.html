@@ -203,9 +203,17 @@
     </a>
     <div id="collapseSts" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
         <div class="bg-white py-2 collapse-inner rounded">
+            {% if user_info.type == "Root Account" %}
+
             <a class="collapse-item" href="{{ url_for('manage.manage_sts_permissions') }}">Admin Permission</a>
+            <a class="collapse-item" href="{{ url_for('manage_iam.manage_roles_page') }}">Role Management</a>
+             {% endif %}
+            <a class="collapse-item" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a>
+
+
         </div>
     </div>
+
 </li>
 
             <!-- Divider -->
