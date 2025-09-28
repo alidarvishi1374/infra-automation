@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, json
 from helpers.auth import login_required
-from helpers.aws import get_buckets_info, get_user_type, create_bucket
+from helpers.aws import get_buckets_info, get_user_type, create_bucket,get_iam_client
 from helpers.aws import get_s3_client
 from botocore.exceptions import ClientError
 
@@ -9,12 +9,49 @@ bucket_bp = Blueprint("bucket", __name__)
 @bucket_bp.route("/home")
 @login_required
 def home():
+    # S3 Buckets
     buckets_info = get_buckets_info()
     bucket_count = len(buckets_info)
     total_size = sum(bucket["Size"] for bucket in buckets_info)
-    user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
-    return render_template("index.html", bucket_count=bucket_count, total_size=total_size, user_info=user_info)
 
+    # User info
+    user_info = get_user_type(
+        session["access_key"], 
+        session["secret_key"], 
+        session["endpoint_url"]
+    )
+
+    # IAM Client
+    iam_client = get_iam_client(
+        session["access_key"],
+        session["secret_key"],
+        session["endpoint_url"]
+    )
+
+    # IAM Users count
+    try:
+        users_resp = iam_client.list_users()
+        iam_users_count = len(users_resp.get("Users", []))
+    except Exception as e:
+        print(f"Error fetching IAM users: {e}")
+        iam_users_count = 0
+
+    # IAM Groups count
+    try:
+        groups_resp = iam_client.list_groups()
+        iam_groups_count = len(groups_resp.get("Groups", []))
+    except Exception as e:
+        print(f"Error fetching IAM groups: {e}")
+        iam_groups_count = 0
+
+    return render_template(
+        "index.html", 
+        bucket_count=bucket_count, 
+        total_size=total_size, 
+        iam_users_count=iam_users_count,
+        iam_groups_count=iam_groups_count,
+        user_info=user_info
+    )
 
 @bucket_bp.route("/buckets")
 @login_required
