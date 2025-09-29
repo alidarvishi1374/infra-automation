@@ -3,8 +3,41 @@ from helpers.auth import login_required
 from helpers.aws import get_buckets_info, get_user_type, create_bucket,get_iam_client
 from helpers.aws import get_s3_client
 from botocore.exceptions import ClientError
+from helpers.dashboard import get_bucket_data, get_rate_data, update_database
+from datetime import datetime
+from flask import request, jsonify
 
 bucket_bp = Blueprint("bucket", __name__)
+
+
+@bucket_bp.route("/api/bucket_data", methods=["GET"])
+@login_required
+def api_bucket_data():
+    search_filter = request.args.get("search", "").strip()
+    return jsonify(get_bucket_data(search_filter))
+
+@bucket_bp.route("/api/rate_data", methods=["GET"])
+@login_required
+def api_rate_data():
+    start_date = request.args.get("start_date")
+    start_time = request.args.get("start_time")
+    end_date = request.args.get("end_date")
+    end_time = request.args.get("end_time")
+    search_filter = request.args.get("search", "").strip()
+
+    try:
+        start_dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+        end_dt = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+    except Exception as e:
+        return jsonify({"error": "Invalid date/time"}), 400
+
+    return jsonify(get_rate_data(start_dt, end_dt, search_filter))
+
+@bucket_bp.route("/api/update_database", methods=["GET"])
+@login_required
+def api_update_database():
+    update_database()
+    return jsonify({"status": "success"})
 
 @bucket_bp.route("/home")
 @login_required
@@ -44,13 +77,17 @@ def home():
         print(f"Error fetching IAM groups: {e}")
         iam_groups_count = 0
 
+
     return render_template(
         "index.html", 
         bucket_count=bucket_count, 
         total_size=total_size, 
         iam_users_count=iam_users_count,
         iam_groups_count=iam_groups_count,
-        user_info=user_info
+        user_info=user_info,
+        dashboard_api_bucket_url=url_for("bucket.api_bucket_data"),
+        dashboard_api_rate_url=url_for("bucket.api_rate_data"),
+        dashboard_api_update_url=url_for("bucket.api_update_database")
     )
 
 @bucket_bp.route("/buckets")

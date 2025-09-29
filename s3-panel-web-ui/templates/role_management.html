@@ -28,17 +28,20 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 <div id="wrapper">
   <!-- Sidebar -->
   <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
-    <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('bucket.home') }}">
+    <a class="sidebar-brand d-flex align-items-center justify-content-center">
       <div class="sidebar-brand-icon rotate-n-13"><i class="fab fa-aws" style="color: orange;"></i></div>
       <div class="sidebar-brand-text mx-3">S3 Panel</div>
     </a>
-    <hr class="sidebar-divider my-0">
-    <li class="nav-item">
-      <a class="nav-link" href="{{ url_for('bucket.home') }}">
-        <i class="fas fa-fw fa-tachometer-alt"></i>
-        <span>Dashboard</span>
-      </a>
-    </li>
+            {% if user_info.type == "Root Account" %}
+            <hr class="sidebar-divider my-0">
+
+            <!-- Nav Item - Dashboard -->
+            <li class="nav-item active">
+                <a class="nav-link" href="{{ url_for('bucket.home') }}">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Dashboard</span></a>
+            </li>
+            {% endif %}
     <hr class="sidebar-divider">
     <div class="sidebar-heading">Interface</div>
 <!-- Nav Item - Pages Collapse Menu -->

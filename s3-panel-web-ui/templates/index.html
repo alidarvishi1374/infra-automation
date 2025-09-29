@@ -11,7 +11,41 @@
 
     <title>S3 Panel - Dashboard</title>
     <link rel="icon" type="image/svg" href="{{ url_for('static', filename='img/aws-logo.svg') }}">
+    <style>
 
+/* Dashboard specific styles */
+.search-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.status {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.status-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+    </style>
     <!-- Custom fonts for this template-->
     <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
     <link
@@ -54,6 +88,8 @@
 {% endif %}
 
 
+
+
     <!-- Page Wrapper -->
     <div id="wrapper">
 
@@ -69,6 +105,7 @@
             </a>
 
             <!-- Divider -->
+            {% if user_info.type == "Root Account" %}
             <hr class="sidebar-divider my-0">
 
             <!-- Nav Item - Dashboard -->
@@ -77,6 +114,7 @@
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
             </li>
+            {% endif %}
 
             <!-- Divider -->
             <hr class="sidebar-divider">
@@ -256,181 +294,220 @@
                 <!-- End of Topbar -->
 
                 <!-- Begin Page Content -->
-                <div class="container-fluid">
+               <!-- Begin Page Content -->
+<div class="container-fluid">
 
-                    <!-- Page Heading -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-                        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i
-                                class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i
+                class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+    </div>
+
+    <!-- Content Row - Stats Cards -->
+    <div class="row">
+        <!-- Number Of Buckets -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Number Of Buckets</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ bucket_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-cubes fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Size Of Buckets -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Size Of Buckets</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_size }} MB</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-database fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Number Of IAM Groups -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Number Of IAM Groups</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ iam_groups_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Number Of IAM Users -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Number Of IAM Users</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ iam_users_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- S3 Buckets Dashboard Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">S3 Buckets Analytics Dashboard</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Status Messages -->
+                    <div id="statusMessage" class="status" style="display: none;"></div>
+
+                    <!-- Search Section -->
+                    <div class="search-section mb-4">
+                        <div class="form-group">
+                            <label for="searchInput">🔍 Search Bucket (leave empty to see Top 5):</label>
+                            <div class="input-group">
+                                <input type="text" id="searchInput" class="form-control" placeholder="Enter bucket name...">
+                                <div class="input-group-append">
+                                    <button onclick="loadData()" class="btn btn-primary">Refresh Data</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Content Row -->
-                    <div class="row">
+                    <!-- Warning Message -->
+                    <div id="warningMessage" class="alert alert-warning" style="display: none;"></div>
 
-                        <!-- Earnings (Monthly) Card Example -->
-<!-- Number Of Buckets -->
-<div class="col-xl-3 col-md-6 mb-4">
-    <div class="card border-left-primary shadow h-100 py-2">
-        <div class="card-body">
-            <div class="row no-gutters align-items-center">
-                <div class="col mr-2">
-                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                        Number Of Buckets</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ bucket_count }}</div>
-                </div>
-                <div class="col-auto">
-                    <i class="fas fa-cubes fa-2x text-gray-300"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Total Size Of Buckets -->
-<div class="col-xl-3 col-md-6 mb-4">
-    <div class="card border-left-success shadow h-100 py-2">
-        <div class="card-body">
-            <div class="row no-gutters align-items-center">
-                <div class="col mr-2">
-                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                        Total Size Of Buckets</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_size }} MB</div>
-                </div>
-                <div class="col-auto">
-                    <i class="fas fa-database fa-2x text-gray-300"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Number Of IAM Groups -->
-<div class="col-xl-3 col-md-6 mb-4">
-    <div class="card border-left-info shadow h-100 py-2">
-        <div class="card-body">
-            <div class="row no-gutters align-items-center">
-                <div class="col mr-2">
-                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                        Number Of IAM Groups</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ iam_groups_count }}</div>
-                </div>
-                <div class="col-auto">
-                    <i class="fas fa-users fa-2x text-gray-300"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Number Of IAM Users -->
-<div class="col-xl-3 col-md-6 mb-4">
-    <div class="card border-left-warning shadow h-100 py-2">
-        <div class="card-body">
-            <div class="row no-gutters align-items-center">
-                <div class="col mr-2">
-                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                        Number Of IAM Users</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ iam_users_count }}</div>
-                </div>
-                <div class="col-auto">
-                    <i class="fas fa-user fa-2x text-gray-300"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-                    <!-- Content Row -->
-
-                    <div class="row">
-
-                        <!-- Area Chart -->
-                        <div class="col-xl-8 col-lg-7">
-                            <div class="card shadow mb-4">
-                                <!-- Card Header - Dropdown -->
-                                <div
-                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Earnings Overview</h6>
-                                    <div class="dropdown no-arrow">
-                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
-                                            aria-labelledby="dropdownMenuLink">
-                                            <div class="dropdown-header">Dropdown Header:</div>
-                                            <a class="dropdown-item" href="#">Action</a>
-                                            <a class="dropdown-item" href="#">Another action</a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Something else here</a>
-                                        </div>
-                                    </div>
+                    <!-- DateTime Selection -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">Start Date & Time</h6>
                                 </div>
-                                <!-- Card Body -->
                                 <div class="card-body">
-                                    <div class="chart-area">
-                                        <canvas id="myAreaChart"></canvas>
+                                    <div class="form-group">
+                                        <input type="date" id="startDate" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="time" id="startTime" class="form-control">
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Pie Chart -->
-                        <div class="col-xl-4 col-lg-5">
-                            <div class="card shadow mb-4">
-                                <!-- Card Header - Dropdown -->
-                                <div
-                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Revenue Sources</h6>
-                                    <div class="dropdown no-arrow">
-                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
-                                            aria-labelledby="dropdownMenuLink">
-                                            <div class="dropdown-header">Dropdown Header:</div>
-                                            <a class="dropdown-item" href="#">Action</a>
-                                            <a class="dropdown-item" href="#">Another action</a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Something else here</a>
-                                        </div>
-                                    </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">End Date & Time</h6>
                                 </div>
-                                <!-- Card Body -->
                                 <div class="card-body">
-                                    <div class="chart-pie pt-4 pb-2">
-                                        <canvas id="myPieChart"></canvas>
+                                    <div class="form-group">
+                                        <input type="date" id="endDate" class="form-control">
                                     </div>
-                                    <div class="mt-4 text-center small">
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-primary"></i> Direct
-                                        </span>
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-success"></i> Social
-                                        </span>
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-info"></i> Referral
-                                        </span>
+                                    <div class="form-group">
+                                        <input type="time" id="endTime" class="form-control">
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Content Row -->
-                    <div class="row">
-                        <div class="col-lg-6 mb-4">
+                    <!-- Charts -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">Bucket Sizes (Bar Chart)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="barChart" style="height: 400px;">
+                                        <div class="text-center py-5">Loading bar chart...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">Bucket Sizes (Pie Chart)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="pieChart" style="height: 400px;">
+                                        <div class="text-center py-5">Loading pie chart...</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
+                    <!-- Rate Chart -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold text-primary">⏱ Bucket Ingestion Rate</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="rateChart" style="height: 400px;">
+                                <div class="text-center py-5">Select date range to load rate chart</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold text-primary">📋 Bucket Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="loadingTable" class="text-center py-3">Loading data...</div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="dataTable" style="display: none;">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Bucket</th>
+                                            <th>Size (Bytes)</th>
+                                            <th>Size (GB)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <!-- /.container-fluid -->
-
             </div>
-            <!-- End of Main Content -->
+        </div>
+    </div>
 
+</div>
+<!-- /.container-fluid -->
             <!-- Footer -->
             <footer class="sticky-footer bg-white">
                 <div class="container my-auto">
@@ -485,6 +562,302 @@
     <!-- Page level custom scripts -->
     <script src="{{ url_for('static', filename='js/demo/chart-area-demo.js') }}"></script>
     <script src="{{ url_for('static', filename='js/demo/chart-pie-demo.js') }}"></script>
+
+
+<script>
+    // Initialize default datetime values
+    function initializeDatetime() {
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
+        
+        // Start datetime (1 hour ago)
+        document.getElementById('startDate').value = oneHourAgo.toISOString().split('T')[0];
+        document.getElementById('startTime').value = oneHourAgo.toTimeString().split(' ')[0].substring(0, 5);
+        
+        // End datetime (now)
+        document.getElementById('endDate').value = now.toISOString().split('T')[0];
+        document.getElementById('endTime').value = now.toTimeString().split(' ')[0].substring(0, 5);
+    }
+
+    // Show status message
+    function showStatus(message, type = 'success') {
+        const statusEl = $('#statusMessage');
+        statusEl.removeClass('status-success status-error')
+               .addClass(type === 'success' ? 'status-success' : 'status-error')
+               .text(message)
+               .show();
+        
+        setTimeout(() => {
+            statusEl.fadeOut();
+        }, 5000);
+    }
+
+    // Load all data
+    function loadData() {
+        const searchFilter = document.getElementById('searchInput').value;
+        loadBucketData(searchFilter);
+        loadRateData(searchFilter);
+    }
+
+    // Load bucket data
+    function loadBucketData(searchFilter = '') {
+        $('#loadingTable').show();
+        $('#dataTable').hide();
+        
+        $.getJSON('/api/bucket_data', { search: searchFilter })
+            .done(function(data) {
+                updateCharts(data);
+                updateTable(data);
+            })
+            .fail(function(xhr) {
+                const errorMsg = xhr.responseJSON?.error || 'Error loading bucket data';
+                $('#loadingTable').html('Error: ' + errorMsg);
+                showStatus(errorMsg, 'error');
+            });
+    }
+
+    // Load rate data
+    function loadRateData(searchFilter = '') {
+        const startDate = $('#startDate').val();
+        const startTime = $('#startTime').val();
+        const endDate = $('#endDate').val();
+        const endTime = $('#endTime').val();
+        
+        if (!startDate || !startTime || !endDate || !endTime) {
+            showWarning('Please select both start and end datetime');
+            return;
+        }
+        
+        const startDt = new Date(startDate + 'T' + startTime);
+        const endDt = new Date(endDate + 'T' + endTime);
+        
+        if (endDt <= startDt) {
+            showWarning('⚠️ End datetime must be after Start datetime. Adjusted automatically.');
+            // Auto-adjust: add 1 hour to start datetime
+            const adjustedEndDt = new Date(startDt.getTime() + (60 * 60 * 1000));
+            $('#endDate').val(adjustedEndDt.toISOString().split('T')[0]);
+            $('#endTime').val(adjustedEndDt.toTimeString().split(' ')[0].substring(0, 5));
+            loadRateData(searchFilter);
+            return;
+        }
+        
+        hideWarning();
+        
+        $('#rateChart').html('<div class="loading">Loading rate data...</div>');
+        
+        $.getJSON('/api/rate_data', {
+            start_date: startDate,
+            start_time: startTime,
+            end_date: endDate,
+            end_time: endTime,
+            search: searchFilter
+        })
+        .done(function(data) {
+            updateRateChart(data, startDt, endDt);
+        })
+        .fail(function(xhr) {
+            const errorMsg = xhr.responseJSON?.error || 'Error loading rate data';
+            $('#rateChart').html('<div class="loading">Error: ' + errorMsg + '</div>');
+            showStatus(errorMsg, 'error');
+        });
+    }
+
+    // Update charts with bucket data
+    function updateCharts(data) {
+        if (data.length === 0) {
+            $('#barChart').html('<div class="loading">No data available</div>');
+            $('#pieChart').html('<div class="loading">No data available</div>');
+            return;
+        }
+        
+        const buckets = data.map(item => item.Bucket);
+        const sizes = data.map(item => item.Size_GB);
+        
+        // Bar Chart
+        const barTrace = {
+            x: buckets,
+            y: sizes,
+            type: 'bar',
+            marker: {
+                color: buckets.map((_, i) => getColor(i))
+            },
+            text: sizes.map(size => size.toFixed(2)),
+            textposition: 'auto'
+        };
+        
+        const barLayout = {
+            title: 'Bucket Sizes (Bar Chart)',
+            xaxis: { title: 'Bucket', showgrid: false },
+            yaxis: { title: 'Size in GB', showgrid: true, gridcolor: 'lightgray' },
+            plot_bgcolor: 'white'
+        };
+        
+        $('#barChart').empty();
+        Plotly.newPlot('barChart', [barTrace], barLayout);
+        
+        // Pie Chart
+        const pieTrace = {
+            labels: buckets,
+            values: sizes,
+            type: 'pie',
+            hole: 0.4,
+            marker: {
+                colors: buckets.map((_, i) => getColor(i))
+            }
+        };
+        
+        const pieLayout = {
+            title: 'Bucket Sizes (Pie Chart)'
+        };
+        
+        $('#pieChart').empty();
+        Plotly.newPlot('pieChart', [pieTrace], pieLayout);
+    }
+
+    // Update rate chart
+    function updateRateChart(rateData, startDt, endDt) {
+        if (rateData.length === 0) {
+            $('#rateChart').html('<div class="loading">No rate data available for selected period</div>');
+            return;
+        }
+        
+        // Group data by bucket
+        const buckets = {};
+        rateData.forEach(item => {
+            if (!buckets[item.bucket]) {
+                buckets[item.bucket] = [];
+            }
+            buckets[item.bucket].push({
+                time: new Date(item.time),
+                rate: item.Rate_MB_min || 0
+            });
+        });
+        
+        const traces = [];
+        Object.keys(buckets).forEach(bucket => {
+            const bucketData = buckets[bucket];
+            bucketData.sort((a, b) => a.time - b.time);
+            
+            traces.push({
+                x: bucketData.map(d => d.time),
+                y: bucketData.map(d => d.rate),
+                mode: 'lines+markers',
+                name: bucket,
+                type: 'scatter'
+            });
+        });
+        
+        const delta = (endDt - startDt) / 1000; // in seconds
+        let tick_sec;
+        if (delta <= 3600) {
+            tick_sec = 300; // 5 minutes
+        } else if (delta <= 6 * 3600) {
+            tick_sec = 1800; // 30 minutes
+        } else if (delta <= 24 * 3600) {
+            tick_sec = 3600; // 1 hour
+        } else {
+            tick_sec = 86400; // 1 day
+        }
+        
+        const layout = {
+            title: `📈 Bucket Ingestion Rate (${formatDateTime(startDt)} to ${formatDateTime(endDt)})`,
+            xaxis: {
+                title: 'Time',
+                range: [startDt, endDt],
+                tickformat: '%H:%M<br>%d-%m',
+                dtick: tick_sec * 1000
+            },
+            yaxis: {
+                title: 'Rate (MB/min)'
+            }
+        };
+        
+        $('#rateChart').empty();
+        Plotly.newPlot('rateChart', traces, layout);
+    }
+
+    // Update data table
+    function updateTable(data) {
+        const tableBody = $('#tableBody');
+        tableBody.empty();
+        
+        if (data.length === 0) {
+            $('#loadingTable').html('No buckets found');
+            return;
+        }
+        
+        data.forEach(item => {
+            const row = `<tr>
+                <td>${escapeHtml(item.Bucket)}</td>
+                <td>${formatNumber(item.Size_Bytes)}</td>
+                <td>${item.Size_GB.toFixed(2)}</td>
+            </tr>`;
+            tableBody.append(row);
+        });
+        
+        $('#loadingTable').hide();
+        $('#dataTable').show();
+    }
+
+    // Utility functions
+    function getColor(index) {
+        const colors = [
+            '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+        ];
+        return colors[index % colors.length];
+    }
+    
+    function formatNumber(num) {
+        return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    }
+    
+    function formatDateTime(date) {
+        return date.toLocaleString();
+    }
+    
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+    
+    function showWarning(message) {
+        $('#warningMessage').text(message).show();
+    }
+    
+    function hideWarning() {
+        $('#warningMessage').hide();
+    }
+
+    // Event listeners
+    $(document).ready(function() {
+        initializeDatetime();
+        loadData();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadData, 30000);
+        
+        // Event listeners for datetime changes
+        $('#startDate, #startTime, #endDate, #endTime').change(function() {
+            const searchFilter = $('#searchInput').val();
+            loadRateData(searchFilter);
+        });
+        
+        $('#searchInput').keypress(function(e) {
+            if (e.which === 13) { // Enter key
+                loadData();
+            }
+        });
+    });
+</script>
+
+<!-- Plotly for charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
 </body>
 
 </html>

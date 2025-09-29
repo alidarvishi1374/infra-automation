@@ -1,172 +1,266 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import boto3
 import pandas as pd
 import plotly.express as px
+import plotly.utils
+import json
 from datetime import datetime, timedelta
 from botocore.client import Config
 import sqlite3
-import os
+import threading
+import time
 
-# ======================
-# Flask setup
-# ======================
 app = Flask(__name__)
 
 # ======================
-# S3 Connection
+# Connection details
 # ======================
 ACCESS_KEY = "BTTREFVTW2CVI837BXAL"
 SECRET_KEY = "Mk5SLqCyCpIIZ0IAq6NNqK4tucXLAVCS7jWdwS0T"
 ENDPOINT = "http://192.168.112.113"
 
-s3 = boto3.client(
-    "s3",
-    endpoint_url=ENDPOINT,
-    aws_access_key_id=ACCESS_KEY,
-    aws_secret_access_key=SECRET_KEY,
-    config=Config(signature_version="s3v4"),
-    region_name="us-east-1"
-)
+# Initialize S3 client
+try:
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=ENDPOINT,
+        aws_access_key_id=ACCESS_KEY,
+        aws_secret_access_key=SECRET_KEY,
+        config=Config(signature_version="s3v4"),
+        region_name="us-east-1"
+    )
+    # Test connection
+    s3.list_buckets()
+    print("S3 connection successful")
+except Exception as e:
+    print(f"S3 connection error: {e}")
+    s3 = None
 
 DB_FILE = "bucket_history.db"
 
 # ======================
 # SQLite setup
 # ======================
-conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-cursor = conn.cursor()
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS bucket_history (
-    time TIMESTAMP,
-    bucket TEXT,
-    size_gb REAL
-)
-""")
-conn.commit()
+def init_db():
+    try:
+        conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+        cursor = conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bucket_history (
+            time TIMESTAMP,
+            bucket TEXT,
+            size_gb REAL
+        )
+        """)
+        conn.commit()
+        conn.close()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+
+init_db()
 
 # ======================
 # Function to calculate bucket size
 # ======================
 def get_bucket_size(bucket_name):
+    if not s3:
+        return 0
+        
     total_size = 0
     continuation_token = None
-    while True:
-        if continuation_token:
-            response = s3.list_objects_v2(Bucket=bucket_name, ContinuationToken=continuation_token)
-        else:
-            response = s3.list_objects_v2(Bucket=bucket_name)
+    try:
+        while True:
+            if continuation_token:
+                response = s3.list_objects_v2(Bucket=bucket_name, ContinuationToken=continuation_token)
+            else:
+                response = s3.list_objects_v2(Bucket=bucket_name)
 
-        for obj in response.get("Contents", []):
-            total_size += obj["Size"]
+            if "Contents" in response:
+                for obj in response.get("Contents", []):
+                    total_size += obj["Size"]
 
-        if response.get("IsTruncated"):
-            continuation_token = response["NextContinuationToken"]
-        else:
-            break
+            if response.get("IsTruncated"):
+                continuation_token = response["NextContinuationToken"]
+            else:
+                break
+    except Exception as e:
+        print(f"Error getting size for bucket {bucket_name}: {e}")
     return total_size
 
 # ======================
-# Update DB with current bucket sizes
+# Fetch bucket data
 # ======================
-def update_bucket_history():
-    all_buckets = s3.list_buckets()["Buckets"]
-    bucket_sizes = [(b["Name"], get_bucket_size(b["Name"])) for b in all_buckets]
-    df_all = pd.DataFrame(bucket_sizes, columns=["Bucket", "Size (Bytes)"])
-    df_all["Size (GB)"] = df_all["Size (Bytes)"] / (1024**3)
-
-    now = datetime.now()
-    for _, row in df_all.iterrows():
-        cursor.execute(
-            "INSERT INTO bucket_history (time, bucket, size_gb) VALUES (?, ?, ?)",
-            (now, row["Bucket"], row["Size (GB)"])
-        )
-    conn.commit()
-    cursor.execute("DELETE FROM bucket_history WHERE time < ?", (now - timedelta(days=7),))
-    conn.commit()
-    return df_all
+def get_bucket_data(search_filter=""):
+    if not s3:
+        return []
+        
+    try:
+        all_buckets = s3.list_buckets()["Buckets"]
+        bucket_sizes = []
+        
+        for bucket in all_buckets:
+            bucket_name = bucket["Name"]
+            if not search_filter or search_filter.lower() in bucket_name.lower():
+                size_bytes = get_bucket_size(bucket_name)
+                size_gb = size_bytes / (1024**3)
+                bucket_sizes.append({
+                    "Bucket": bucket_name,
+                    "Size_Bytes": size_bytes,
+                    "Size_GB": size_gb
+                })
+        
+        # Sort by size and limit to top 5 if no search filter
+        if not search_filter:
+            bucket_sizes.sort(key=lambda x: x["Size_Bytes"], reverse=True)
+            bucket_sizes = bucket_sizes[:5]
+        
+        return bucket_sizes
+    except Exception as e:
+        print(f"Error fetching bucket data: {e}")
+        return []
 
 # ======================
-# Flask routes
+# Update database with current data
 # ======================
-@app.route("/", methods=["GET", "POST"])
-def dashboard():
-    df_all = update_bucket_history()
-    hist = pd.read_sql_query("SELECT * FROM bucket_history", conn, parse_dates=["time"])
+def update_database():
+    if not s3:
+        return
+        
+    try:
+        conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+        cursor = conn.cursor()
+        
+        all_buckets = s3.list_buckets()["Buckets"]
+        now = datetime.now()
+        
+        for bucket in all_buckets:
+            bucket_name = bucket["Name"]
+            size_bytes = get_bucket_size(bucket_name)
+            size_gb = size_bytes / (1024**3)
+            
+            cursor.execute(
+                "INSERT INTO bucket_history (time, bucket, size_gb) VALUES (?, ?, ?)",
+                (now, bucket_name, size_gb)
+            )
+        
+        # Remove records older than 7 days
+        cursor.execute("DELETE FROM bucket_history WHERE time < ?", (now - timedelta(days=7),))
+        conn.commit()
+        conn.close()
+        print(f"Database updated at {now}")
+    except Exception as e:
+        print(f"Error updating database: {e}")
 
-    # Default values
-    now = datetime.now()
-    default_start = now - timedelta(hours=1)
-    default_end = now
-    search_bucket = ""
-    start_dt = default_start
-    end_dt = default_end
+# ======================
+# Get rate data
+# ======================
+def get_rate_data(start_dt, end_dt, search_filter=""):
+    try:
+        conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+        
+        if search_filter:
+            query = "SELECT * FROM bucket_history WHERE time BETWEEN ? AND ? AND bucket LIKE ? ORDER BY time"
+            params = [start_dt, end_dt, f"%{search_filter}%"]
+        else:
+            query = "SELECT * FROM bucket_history WHERE time BETWEEN ? AND ? ORDER BY time"
+            params = [start_dt, end_dt]
+        
+        hist = pd.read_sql_query(query, conn, parse_dates=["time"], params=params)
+        conn.close()
+        
+        if hist.empty:
+            return []
+        
+        # Calculate rate
+        hist = hist.sort_values(["bucket", "time"]).reset_index(drop=True)
+        hist["Rate_MB_min"] = hist.groupby("bucket")["size_gb"].diff() * 1024
+        hist["Rate_MB_min"] = hist["Rate_MB_min"].fillna(0)
+        
+        # Convert to list of dictionaries
+        result = []
+        for _, row in hist.iterrows():
+            result.append({
+                "time": row["time"].strftime("%Y-%m-%d %H:%M:%S"),
+                "bucket": row["bucket"],
+                "size_gb": row["size_gb"],
+                "Rate_MB_min": row["Rate_MB_min"]
+            })
+        
+        return result
+    except Exception as e:
+        print(f"Error getting rate data: {e}")
+        return []
 
-    if request.method == "POST":
-        start_date = request.form.get("start_date")
-        start_time = request.form.get("start_time")
-        end_date = request.form.get("end_date")
-        end_time = request.form.get("end_time")
-        search_bucket = request.form.get("search_bucket", "")
+# ======================
+# Routes
+# ======================
+@app.route('/', methods=['POST'])
+def index():
+    return render_template('dashboard.html')
 
+@app.route('/api/bucket_data', methods=['GET'])
+def api_bucket_data():
+    search_filter = request.args.get('search', '').strip()
+    bucket_data = get_bucket_data(search_filter)
+    return jsonify(bucket_data)
+
+@app.route('/api/rate_data', methods=['GET'])
+def api_rate_data():
+    try:
+        start_date = request.args.get('start_date')
+        start_time = request.args.get('start_time')
+        end_date = request.args.get('end_date')
+        end_time = request.args.get('end_time')
+        search_filter = request.args.get('search', '').strip()
+        
+        if not all([start_date, start_time, end_date, end_time]):
+            return jsonify({"error": "All datetime parameters are required"}), 400
+        
         start_dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         end_dt = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
-        if end_dt < start_dt:
-            end_dt = start_dt + timedelta(hours=1)
+        
+        rate_data = get_rate_data(start_dt, end_dt, search_filter)
+        return jsonify(rate_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
-    # Filter data for charts
-    if search_bucket:
-        df = df_all[df_all["Bucket"].str.contains(search_bucket, case=False, na=False)].reset_index(drop=True)
-    else:
-        df = df_all.sort_values("Size (Bytes)", ascending=False).head(5).reset_index(drop=True)
-
-    hist_rate = hist[(hist["time"] >= start_dt) & (hist["time"] <= end_dt)].copy()
-    if search_bucket:
-        hist_rate = hist_rate[hist_rate["bucket"].str.contains(search_bucket, case=False, na=False)]
-
-    # Calculate ingestion rate (MB/min)
-    hist_rate = hist_rate.sort_values(["bucket", "time"]).reset_index(drop=True)
-    hist_rate["Rate (MB/min)"] = hist_rate.groupby("bucket")["size_gb"].diff() * 1024
-    hist_rate["Rate (MB/min)"] = hist_rate["Rate (MB/min)"].fillna(0)
-
-    # ======================
-    # Create charts
-    # ======================
-    fig_bar = px.bar(df, x="Bucket", y="Size (GB)", color="Bucket", text_auto=".2f",
-                    title="Bucket Sizes (Bar Chart)", template="plotly_dark")
-    fig_bar.update_layout(
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(showgrid=True, gridcolor="gray"),
-        yaxis=dict(showgrid=True, gridcolor="gray")
-    )
-    fig_bar.update_traces(marker_line_width=1.5, marker_line_color="white", selector=dict(type="bar"))
-
-    fig_pie = px.pie(df, names="Bucket", values="Size (GB)", hole=0.4,
-                    title="Bucket Sizes (Pie Chart)", template="plotly_dark",
-                    color_discrete_sequence=px.colors.qualitative.Vivid)
-
-    fig_rate = px.line(hist_rate, x="time", y="Rate (MB/min)", color="bucket", markers=True,
-                    title=f"Bucket Ingestion Rate ({start_dt.strftime('%Y-%m-%d %H:%M')} to {end_dt.strftime('%Y-%m-%d %H:%M')})",
-                    template="plotly_dark")
-    fig_rate.update_traces(mode='lines+markers', line=dict(width=3), marker=dict(size=8))
-    # Convert plots to HTML
-    bar_html = fig_bar.to_html(full_html=False)
-    pie_html = fig_pie.to_html(full_html=False)
-    rate_html = fig_rate.to_html(full_html=False)
-
-    return render_template("dashboard.html",
-                           bar_html=bar_html,
-                           pie_html=pie_html,
-                           rate_html=rate_html,
-                           search_bucket=search_bucket,
-                           start_dt=start_dt,
-                           end_dt=end_dt)
+@app.route('/api/update_database', methods=['GET'])
+def api_update_database():
+    update_database()
+    return jsonify({"status": "success"})
 
 # ======================
-# Run app
+# Background auto-update
 # ======================
-if __name__ == "__main__":
-    # Make sure templates folder exists
-    if not os.path.exists("templates"):
-        os.mkdir("templates")
-    app.run(debug=True)
+def background_update():
+    while True:
+        try:
+            update_database()
+            time.sleep(30)  # Update every 30 seconds
+        except Exception as e:
+            print(f"Background update error: {e}")
+            time.sleep(30)
+
+# Start background thread
+if s3:
+    update_thread = threading.Thread(target=background_update, daemon=True)
+    update_thread.start()
+    print("Background update thread started")
+else:
+    print("S3 not available, background update disabled")
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"error": "Method not allowed"}), 405
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({"error": "Internal server error"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

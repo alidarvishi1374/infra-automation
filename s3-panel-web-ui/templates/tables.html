@@ -113,7 +113,7 @@
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ url_for('bucket.home')}}">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center">
                 <div class="sidebar-brand-icon rotate-n-13">
                     <i class="fab fa-aws" style="color: orange;"></i>
                 </div>
@@ -121,14 +121,16 @@
             </a>
 
             <!-- Divider -->
+            {% if user_info.type == "Root Account" %}
             <hr class="sidebar-divider my-0">
 
             <!-- Nav Item - Dashboard -->
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('bucket.home')}}">
+            <li class="nav-item active">
+                <a class="nav-link" href="{{ url_for('bucket.home') }}">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
             </li>
+            {% endif %}
 
             <!-- Divider -->
             <hr class="sidebar-divider">
