@@ -111,14 +111,6 @@ def get_buckets_info():
             bucket_data["Replication"] = replication.get("ReplicationConfiguration", {})
         except:
             bucket_data["Replication"] = None
-
-
-        # Encryption
-        try:
-            encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
-            bucket_data["Encryption"] = encryption.get("ServerSideEncryptionConfiguration") is not None
-        except:
-            bucket_data["Encryption"] = False
         
         # Lifecycle
 

@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -12,39 +11,45 @@
     <title>S3 Panel - Dashboard</title>
     <link rel="icon" type="image/svg" href="{{ url_for('static', filename='img/aws-logo.svg') }}">
     <style>
+        /* Dashboard specific styles */
+        .search-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
 
-/* Dashboard specific styles */
-.search-section {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 5px;
-}
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
 
-.status {
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 5px;
-}
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
 
-.status-success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
 
-.status-error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
 
-.loading {
-    text-align: center;
-    padding: 20px;
-    color: #666;
-}
-
+        .chart-container {
+            background: white;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
     </style>
     <!-- Custom fonts for this template-->
     <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
@@ -52,43 +57,41 @@
         href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
         rel="stylesheet">
 
-
     <!-- Custom styles for this template-->
     <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
-
+    <!-- در بخش head بعد از سایر کتابخانه‌ها -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
 <body id="page-top">
 
     {% if success %}
-<div aria-live="polite" aria-atomic="true" 
-     style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000;">
-  <div class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header bg-success text-white">
-      <strong class="me-auto">Success</strong>
+    <div aria-live="polite" aria-atomic="true" 
+         style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000;">
+      <div class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+          <strong class="me-auto">Success</strong>
+        </div>
+        <div class="toast-body">
+          {{ success }}
+        </div>
+      </div>
     </div>
-    <div class="toast-body">
-      {{ success }}
-    </div>
-  </div>
-</div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    var toastEl = document.querySelector('.toast');
-    if (toastEl) {
-      var toast = new bootstrap.Toast(toastEl, {
-        autohide: true,
-        delay: 3000
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        var toastEl = document.querySelector('.toast');
+        if (toastEl) {
+          var toast = new bootstrap.Toast(toastEl, {
+            autohide: true,
+            delay: 3000
+          });
+          toast.show();
+        }
       });
-      toast.show();
-    }
-  });
-</script>
-{% endif %}
-
-
-
+    </script>
+    {% endif %}
 
     <!-- Page Wrapper -->
     <div id="wrapper">
@@ -125,43 +128,44 @@
             </div>
 
             <!-- Nav Item - Pages Collapse Menu -->
-<li class="nav-item">
-    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
-        aria-expanded="true" aria-controls="collapseBuckets">
-        <i class="fa fa-cubes" aria-hidden="true"></i>
-        <span>Buckets</span>
-    </a>
-    <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
-        <div class="bg-white py-2 collapse-inner rounded">
-            <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">Buckets</a>
-        </div>
-    </div>
-</li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
+                    aria-expanded="true" aria-controls="collapseBuckets">
+                    <i class="fa fa-cubes" aria-hidden="true"></i>
+                    <span>Buckets</span>
+                </a>
+                <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">Buckets</a>
+                    </div>
+                </div>
+            </li>
 
-<!-- Nav Item - Objects Collapse Menu -->
-<li class="nav-item">
-    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseObjects"
-        aria-expanded="true" aria-controls="collapseObjects">
-        <i class="fas fa-database"></i>
-        <span>Objects</span>
-    </a>
-    <div id="collapseObjects" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
-        <div class="bg-white py-2 collapse-inner rounded">
-            <a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
-        </div>
-    </div>
-</li>
+            <!-- Nav Item - Objects Collapse Menu -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseObjects"
+                    aria-expanded="true" aria-controls="collapseObjects">
+                    <i class="fas fa-database"></i>
+                    <span>Objects</span>
+                </a>
+                <div id="collapseObjects" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
+                    </div>
+                </div>
+            </li>
 
-    <li class="nav-item">
-      <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseS3select">
-<i class="fas fa-table"></i><span>S3select</span>
-      </a>
-      <div id="collapseS3select" class="collapse">
-        <div class="bg-white py-2 collapse-inner rounded">
-          <a class="collapse-item" href="{{ url_for('s3_select.s3_select_page') }}">S3select</a>
-        </div>
-      </div>
-    </li>
+            <li class="nav-item">
+              <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseS3select">
+            <i class="fas fa-table"></i><span>S3select</span>
+              </a>
+              <div id="collapseS3select" class="collapse">
+                <div class="bg-white py-2 collapse-inner rounded">
+                  <a class="collapse-item" href="{{ url_for('s3_select.s3_select_page') }}">S3select</a>
+                </div>
+              </div>
+            </li>
+
             <!-- Nav Item - Utilities Collapse Menu -->
             {% if user_info.type == "Root Account" %}
             <li class="nav-item">
@@ -180,26 +184,23 @@
             </li>
             {% endif %}
 
-<li class="nav-item">
-    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSts"
-        aria-expanded="true" aria-controls="collapseSts">
-        <i class="fas fa-theater-masks"></i>
-        <span>STS</span>
-    </a>
-    <div id="collapseSts" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
-        <div class="bg-white py-2 collapse-inner rounded">
-            {% if user_info.type == "Root Account" %}
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSts"
+                    aria-expanded="true" aria-controls="collapseSts">
+                    <i class="fas fa-theater-masks"></i>
+                    <span>STS</span>
+                </a>
+                <div id="collapseSts" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        {% if user_info.type == "Root Account" %}
+                        <a class="collapse-item" href="{{ url_for('manage.manage_sts_permissions') }}">Admin Permission</a>
+                        <a class="collapse-item" href="{{ url_for('manage_iam.manage_roles_page') }}">Role Management</a>
+                         {% endif %}
+                        <a class="collapse-item" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a>
+                    </div>
+                </div>
+            </li>
 
-            <a class="collapse-item" href="{{ url_for('manage.manage_sts_permissions') }}">Admin Permission</a>
-            <a class="collapse-item" href="{{ url_for('manage_iam.manage_roles_page') }}">Role Management</a>
-             {% endif %}
-            <a class="collapse-item" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a>
-
-
-        </div>
-    </div>
-
-</li>
             <!-- Divider -->
             <hr class="sidebar-divider d-none d-md-block">
 
@@ -209,7 +210,6 @@
                     <i class="fas fa-fw fa-user"></i>
                     <span>Profile</span>
                 </a>
-            </li>
             </li>
 
             <!-- Sidebar Toggler (Sidebar) -->
@@ -260,6 +260,7 @@
                                 </form>
                             </div>
                         </li>
+
                         <!-- Nav Item - User Information -->
                         <li class="nav-item dropdown no-arrow">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
@@ -294,220 +295,207 @@
                 <!-- End of Topbar -->
 
                 <!-- Begin Page Content -->
-               <!-- Begin Page Content -->
-<div class="container-fluid">
+                <div class="container-fluid">
 
-    <!-- Page Heading -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i
-                class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+                    <!-- Page Heading -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+    <div>
+        <button onclick="loadAllData()" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm mr-2">
+            <i class="fas fa-sync-alt fa-sm text-white-50"></i> Refresh Data
+        </button>
+        <button onclick="exportToPDF()" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm">
+            <i class="fas fa-file-pdf fa-sm text-white-50"></i> Export PDF
+        </button>
     </div>
-
-    <!-- Content Row - Stats Cards -->
-    <div class="row">
-        <!-- Number Of Buckets -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Number Of Buckets</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ bucket_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-cubes fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Size Of Buckets -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Total Size Of Buckets</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_size }} MB</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-database fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Number Of IAM Groups -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Number Of IAM Groups</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ iam_groups_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Number Of IAM Users -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Number Of IAM Users</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ iam_users_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- S3 Buckets Dashboard Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">S3 Buckets Analytics Dashboard</h6>
-                </div>
-                <div class="card-body">
-                    <!-- Status Messages -->
-                    <div id="statusMessage" class="status" style="display: none;"></div>
-
-                    <!-- Search Section -->
-                    <div class="search-section mb-4">
-                        <div class="form-group">
-                            <label for="searchInput">🔍 Search Bucket (leave empty to see Top 5):</label>
-                            <div class="input-group">
-                                <input type="text" id="searchInput" class="form-control" placeholder="Enter bucket name...">
-                                <div class="input-group-append">
-                                    <button onclick="loadData()" class="btn btn-primary">Refresh Data</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Warning Message -->
-                    <div id="warningMessage" class="alert alert-warning" style="display: none;"></div>
-
-                    <!-- DateTime Selection -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="m-0 font-weight-bold text-primary">Start Date & Time</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="form-group">
-                                        <input type="date" id="startDate" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="time" id="startTime" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="m-0 font-weight-bold text-primary">End Date & Time</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="form-group">
-                                        <input type="date" id="endDate" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="time" id="endTime" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Charts -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="m-0 font-weight-bold text-primary">Bucket Sizes (Bar Chart)</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div id="barChart" style="height: 400px;">
-                                        <div class="text-center py-5">Loading bar chart...</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="m-0 font-weight-bold text-primary">Bucket Sizes (Pie Chart)</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div id="pieChart" style="height: 400px;">
-                                        <div class="text-center py-5">Loading pie chart...</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Rate Chart -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h6 class="m-0 font-weight-bold text-primary">⏱ Bucket Ingestion Rate</h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="rateChart" style="height: 400px;">
-                                <div class="text-center py-5">Select date range to load rate chart</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Data Table -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="m-0 font-weight-bold text-primary">📋 Bucket Details</h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="loadingTable" class="text-center py-3">Loading data...</div>
-                            <div class="table-responsive">
-                                <table class="table table-bordered" id="dataTable" style="display: none;">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th>Bucket</th>
-                                            <th>Size (Bytes)</th>
-                                            <th>Size (GB)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tableBody"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
 </div>
-<!-- /.container-fluid -->
+
+                    <!-- Content Row - Stats Cards -->
+                    <div class="row">
+                        <!-- Number Of Buckets -->
+                        <!-- در بخش کارت‌ها، IDها رو اضافه کن -->
+
+<!-- Number Of Buckets -->
+<div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-left-primary shadow h-100 py-2" id="bucketCountCard">
+        <div class="card-body">
+            <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                        Number Of Buckets</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="bucketCountValue">{{ bucket_count }}</div>
+                </div>
+                <div class="col-auto">
+                    <i class="fas fa-cubes fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Total Size Of Buckets -->
+<div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-left-success shadow h-100 py-2" id="totalSizeCard">
+        <div class="card-body">
+            <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                        Total Size Of Buckets</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalSizeValue">{{ total_size }} MB</div>
+                </div>
+                <div class="col-auto">
+                    <i class="fas fa-database fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Number Of IAM Groups -->
+<div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-left-info shadow h-100 py-2" id="iamGroupsCard">
+        <div class="card-body">
+            <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                        Number Of IAM Groups</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="iamGroupsValue">{{ iam_groups_count }}</div>
+                </div>
+                <div class="col-auto">
+                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Number Of IAM Users -->
+<div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-left-warning shadow h-100 py-2" id="iamUsersCard">
+        <div class="card-body">
+            <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                        Number Of IAM Users</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="iamUsersValue">{{ iam_users_count }}</div>
+                </div>
+                <div class="col-auto">
+                    <i class="fas fa-user fa-2x text-gray-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                    </div>
+
+                    <!-- S3 Buckets Dashboard Section -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">S3 Buckets Analytics Dashboard</h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Status Messages -->
+                                    <div id="statusMessage" class="status" style="display: none;"></div>
+
+                                    <!-- Search Section -->
+                                    <div class="search-section mb-4">
+                                        <div class="form-group">
+                                            <label for="searchInput">🔍 Search Bucket (leave empty to see Top 5 by size):</label>
+                                            <div class="input-group">
+                                                <input type="text" id="searchInput" class="form-control" placeholder="Enter bucket name...">
+                                                <div class="input-group-append">
+                                                    <button onclick="loadAllData()" class="btn btn-primary">
+                                                    <i class="fas fa-search"></i> Search</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Charts Row 1 - Size Charts -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="m-0 font-weight-bold text-primary">📊 Bucket Sizes (Bar Chart)</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div id="barChart" style="height: 400px;">
+                                                        <div class="text-center py-5">Loading bar chart...</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="m-0 font-weight-bold text-primary">📊 Bucket Sizes (Pie Chart)</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div id="pieChart" style="height: 400px;">
+                                                        <div class="text-center py-5">Loading pie chart...</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Charts Row 2 - Object Count -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="m-0 font-weight-bold text-primary">📦 Number of Objects per Bucket</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div id="objectCountChart" style="height: 400px;">
+                                                        <div class="text-center py-5">Loading object count data...</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Data Table -->
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="m-0 font-weight-bold text-primary">📋 Bucket Details</h6>
+                                            <small class="text-muted">Showing: <span id="resultCount">0</span> buckets</small>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="loadingTable" class="text-center py-3">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="sr-only">Loading...</span>
+                                                </div>
+                                                <p>Loading bucket data...</p>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered" id="dataTable" style="display: none;">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th>Bucket Name</th>
+                                                            <th>Size (Bytes)</th>
+                                                            <th>Size (GB)</th>
+                                                            <th>Object Count</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tableBody"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /.container-fluid -->
+
+            </div>
+            <!-- End of Main Content -->
+
             <!-- Footer -->
             <footer class="sticky-footer bg-white">
                 <div class="container my-auto">
@@ -557,27 +545,269 @@
     <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
-    <!-- Page level plugins -->
-    <script src="{{ url_for('static', filename='vendor/chart.js/Chart.min.js') }}"></script>
-    <!-- Page level custom scripts -->
-    <script src="{{ url_for('static', filename='js/demo/chart-area-demo.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/demo/chart-pie-demo.js') }}"></script>
 
+    <!-- Plotly for charts -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
 <script>
-    // Initialize default datetime values
-    function initializeDatetime() {
+    // Export dashboard to PDF (نسخه زیبا و حرفه‌ای)
+    function exportToPDF() {
+        showStatus('Generating PDF report...', 'success');
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // تاریخ و زمان فارسی/میلادی دقیق
         const now = new Date();
-        const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
+        const persianDate = now.toLocaleDateString('fa-IR');
+        const englishDate = now.toLocaleDateString('en-US');
+        const time = now.toLocaleTimeString('en-US', { 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
         
-        // Start datetime (1 hour ago)
-        document.getElementById('startDate').value = oneHourAgo.toISOString().split('T')[0];
-        document.getElementById('startTime').value = oneHourAgo.toTimeString().split(' ')[0].substring(0, 5);
+        const fileName = `s3-dashboard-report-${englishDate.replace(/\//g, '-')}-${time.replace(/:/g, '-')}.pdf`;
+
+        // هدر زیبا با گرادیانت
+        pdf.setFillColor(41, 128, 185);
+        pdf.rect(0, 0, 210, 25, 'F');
         
-        // End datetime (now)
-        document.getElementById('endDate').value = now.toISOString().split('T')[0];
-        document.getElementById('endTime').value = now.toTimeString().split(' ')[0].substring(0, 5);
+        // لوگو و عنوان
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('S3 DASHBOARD REPORT', 105, 15, { align: 'center' });
+        
+        // تاریخ و زمان
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Generated: ${englishDate} ${time}`, 105, 22, { align: 'center' });
+        
+        let yPosition = 40;
+
+        // بخش آمار کلی با کارت‌های زیبا
+        pdf.setFillColor(245, 245, 245);
+        pdf.roundedRect(10, yPosition, 190, 30, 3, 3, 'F');
+        
+        pdf.setFontSize(16);
+        pdf.setTextColor(44, 62, 80);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('OVERVIEW STATISTICS', 20, yPosition + 8);
+        
+        yPosition += 15;
+        
+        // آمارها در دو ستون
+        pdf.setFontSize(11);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'normal');
+        
+        // ستون اول
+        pdf.text(`• Buckets: ${$('#bucketCountValue').text()}`, 20, yPosition + 8);
+        pdf.text(`• Total Size: ${$('#totalSizeValue').text()}`, 20, yPosition + 16);
+        
+        // ستون دوم
+        pdf.text(`• IAM Groups: ${$('#iamGroupsValue').text()}`, 110, yPosition + 8);
+        pdf.text(`• IAM Users: ${$('#iamUsersValue').text()}`, 110, yPosition + 16);
+        
+        yPosition += 35;
+
+        // اضافه کردن نمودارها به صورت عکس
+        const chartsPromises = [
+            captureChart('barChart'),
+            captureChart('pieChart'), 
+            captureChart('objectCountChart')
+        ];
+        
+        Promise.all(chartsPromises).then(chartImages => {
+            const chartTitles = [
+                'Bucket Sizes Distribution (Bar Chart)',
+                'Bucket Sizes Percentage (Pie Chart)',
+                'Number of Objects per Bucket'
+            ];
+            
+            // اضافه کردن هر نمودار به PDF
+            chartImages.forEach((chartData, index) => {
+                if (chartData) {
+                    const chartWidth = 180;
+                    const chartHeight = (chartData.height * chartWidth) / chartData.width;
+                    
+                    // بررسی اگر فضای کافی در صفحه نیست، صفحه جدید اضافه کن
+                    if (yPosition + chartHeight + 20 > 270) {
+                        pdf.addPage();
+                        yPosition = 20;
+                        
+                        // هدر برای صفحات جدید
+                        pdf.setFillColor(41, 128, 185);
+                        pdf.rect(0, 0, 210, 15, 'F');
+                        pdf.setTextColor(255, 255, 255);
+                        pdf.setFontSize(12);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.text('S3 DASHBOARD REPORT - Continued', 105, 10, { align: 'center' });
+                        yPosition = 25;
+                    }
+                    
+                    // عنوان نمودار
+                    pdf.setFontSize(14);
+                    pdf.setTextColor(44, 62, 80);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(chartTitles[index], 15, yPosition);
+                    yPosition += 8;
+                    
+                    // خود نمودار
+                    pdf.addImage(chartData.dataUrl, 'PNG', 15, yPosition, chartWidth, chartHeight);
+                    yPosition += chartHeight + 15;
+                }
+            });
+            
+            // اضافه کردن جدول داده‌ها
+            if (yPosition + 50 > 270) {
+                pdf.addPage();
+                yPosition = 25;
+                
+                // هدر برای صفحات جدید
+                pdf.setFillColor(41, 128, 185);
+                pdf.rect(0, 0, 210, 15, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(12);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('S3 DASHBOARD REPORT - Bucket Details', 105, 10, { align: 'center' });
+            }
+            
+            // هدر جدول
+            pdf.setFillColor(52, 152, 219);
+            pdf.roundedRect(10, yPosition, 190, 10, 2, 2, 'F');
+            
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('BUCKET DETAILS', 105, yPosition + 7, { align: 'center' });
+            yPosition += 15;
+            
+            // هدر ستون‌های جدول
+            pdf.setFillColor(236, 240, 241);
+            pdf.rect(10, yPosition, 190, 8, 'F');
+            
+            pdf.setTextColor(44, 62, 80);
+            pdf.setFontSize(8);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Bucket Name', 15, yPosition + 5);
+            pdf.text('Size (Bytes)', 70, yPosition + 5);
+            pdf.text('Size (GB)', 120, yPosition + 5);
+            pdf.text('Objects', 170, yPosition + 5);
+            
+            yPosition += 10;
+            
+            // گرفتن داده‌های جدول
+            const tableData = [];
+            $('#tableBody tr').each(function() {
+                const row = [];
+                $(this).find('td').each(function() {
+                    row.push($(this).text().trim());
+                });
+                tableData.push(row);
+            });
+            
+            // اضافه کردن داده‌های جدول به PDF
+            pdf.setFontSize(7);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(0, 0, 0);
+            
+            tableData.forEach((row, rowIndex) => {
+                if (yPosition > 270) {
+                    pdf.addPage();
+                    yPosition = 25;
+                    
+                    // هدر برای صفحات جدید
+                    pdf.setFillColor(41, 128, 185);
+                    pdf.rect(0, 0, 210, 15, 'F');
+                    pdf.setTextColor(255, 255, 255);
+                    pdf.setFontSize(12);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('S3 DASHBOARD REPORT - Bucket Details', 105, 10, { align: 'center' });
+                    
+                    // هدر ستون‌های جدول دوباره
+                    pdf.setFillColor(236, 240, 241);
+                    pdf.rect(10, yPosition, 190, 8, 'F');
+                    
+                    pdf.setTextColor(44, 62, 80);
+                    pdf.setFontSize(8);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('Bucket Name', 15, yPosition + 5);
+                    pdf.text('Size (Bytes)', 70, yPosition + 5);
+                    pdf.text('Size (GB)', 120, yPosition + 5);
+                    pdf.text('Objects', 170, yPosition + 5);
+                    
+                    yPosition += 10;
+                }
+                
+                // ردیف‌های جدول با رنگ متناوب
+                if (rowIndex % 2 === 0) {
+                    pdf.setFillColor(250, 250, 250);
+                } else {
+                    pdf.setFillColor(245, 245, 245);
+                }
+                pdf.rect(10, yPosition, 190, 5, 'F');
+                
+                pdf.setTextColor(0, 0, 0);
+                pdf.text(row[0].substring(0, 25), 15, yPosition + 3.5); // محدود کردن طول نام
+                pdf.text(row[1], 70, yPosition + 3.5);
+                pdf.text(row[2], 120, yPosition + 3.5);
+                pdf.text(row[3], 170, yPosition + 3.5);
+                
+                yPosition += 5;
+            });
+            
+            // اضافه کردن فوتر زیبا
+            const totalPages = pdf.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                pdf.setPage(i);
+                
+                // خط جداکننده
+                pdf.setDrawColor(200, 200, 200);
+                pdf.line(10, 280, 200, 280);
+                
+                // فوتر
+                pdf.setFontSize(8);
+                pdf.setTextColor(128, 128, 128);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text('Generated by S3 Panel - AWS S3 Management Dashboard', 105, 285, { align: 'center' });
+                pdf.text(`Page ${i} of ${totalPages}`, 105, 290, { align: 'center' });
+            }
+            
+            // دانلود فایل با نام دقیق
+            pdf.save(fileName);
+            showStatus('PDF report generated successfully!', 'success');
+            
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            showStatus('Error generating PDF report', 'error');
+        });
     }
+
+    // تابع برای گرفتن عکس از نمودارها (بدون تغییر)
+    function captureChart(chartId) {
+        return new Promise((resolve) => {
+            const chartElement = document.getElementById(chartId);
+            if (chartElement) {
+                html2canvas(chartElement, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                }).then(canvas => {
+                    resolve({
+                        dataUrl: canvas.toDataURL('image/png'),
+                        width: canvas.width,
+                        height: canvas.height
+                    });
+                }).catch(() => resolve(null));
+            } else {
+                resolve(null);
+            }
+        });
+    }
+
 
     // Show status message
     function showStatus(message, type = 'success') {
@@ -593,76 +823,87 @@
     }
 
     // Load all data
-    function loadData() {
-        const searchFilter = document.getElementById('searchInput').value;
+    function loadAllData() {
+        // showStatus('Refreshing data...', 'success');
+        const searchFilter = $('#searchInput').val().trim();
+        loadOverviewStats(); // آمار کلی رو آپدیت کن
         loadBucketData(searchFilter);
-        loadRateData(searchFilter);
+        loadObjectCountData(searchFilter);
     }
 
-    // Load bucket data
-    function loadBucketData(searchFilter = '') {
-        $('#loadingTable').show();
-        $('#dataTable').hide();
-        
-        $.getJSON('/api/bucket_data', { search: searchFilter })
+    // Load data without overview stats (برای مواقعی که فقط نمودارها آپدیت میشن)
+    function loadChartData() {
+        const searchFilter = $('#searchInput').val().trim();
+        loadBucketData(searchFilter);
+        loadObjectCountData(searchFilter);
+    }
+
+    // Load overview stats (تمام آمار)
+    function loadOverviewStats() {
+        $.getJSON('{{ url_for("bucket.api_overview_stats") }}')
             .done(function(data) {
-                updateCharts(data);
-                updateTable(data);
+                updateOverviewStats(data);
             })
             .fail(function(xhr) {
-                const errorMsg = xhr.responseJSON?.error || 'Error loading bucket data';
-                $('#loadingTable').html('Error: ' + errorMsg);
+                const errorMsg = xhr.responseJSON?.error || 'Error loading overview stats';
                 showStatus(errorMsg, 'error');
             });
     }
 
-    // Load rate data
-    function loadRateData(searchFilter = '') {
-        const startDate = $('#startDate').val();
-        const startTime = $('#startTime').val();
-        const endDate = $('#endDate').val();
-        const endTime = $('#endTime').val();
+    // Update overview cards with new data
+    function updateOverviewStats(data) {
+        // آپدیت کارت تعداد باکت‌ها
+        $('#bucketCountValue').text(data.bucket_count || 0);
         
-        if (!startDate || !startTime || !endDate || !endTime) {
-            showWarning('Please select both start and end datetime');
-            return;
-        }
+        // آپدیت کارت حجم کل
+        $('#totalSizeValue').text(data.total_size_mb ? data.total_size_mb.toFixed(2) + ' MB' : '0 MB');
         
-        const startDt = new Date(startDate + 'T' + startTime);
-        const endDt = new Date(endDate + 'T' + endTime);
+        // آپدیت کارت IAM Groups
+        $('#iamGroupsValue').text(data.iam_groups_count || 0);
         
-        if (endDt <= startDt) {
-            showWarning('⚠️ End datetime must be after Start datetime. Adjusted automatically.');
-            // Auto-adjust: add 1 hour to start datetime
-            const adjustedEndDt = new Date(startDt.getTime() + (60 * 60 * 1000));
-            $('#endDate').val(adjustedEndDt.toISOString().split('T')[0]);
-            $('#endTime').val(adjustedEndDt.toTimeString().split(' ')[0].substring(0, 5));
-            loadRateData(searchFilter);
-            return;
-        }
+        // آپدیت کارت IAM Users
+        $('#iamUsersValue').text(data.iam_users_count || 0);
         
-        hideWarning();
-        
-        $('#rateChart').html('<div class="loading">Loading rate data...</div>');
-        
-        $.getJSON('/api/rate_data', {
-            start_date: startDate,
-            start_time: startTime,
-            end_date: endDate,
-            end_time: endTime,
-            search: searchFilter
-        })
-        .done(function(data) {
-            updateRateChart(data, startDt, endDt);
-        })
-        .fail(function(xhr) {
-            const errorMsg = xhr.responseJSON?.error || 'Error loading rate data';
-            $('#rateChart').html('<div class="loading">Error: ' + errorMsg + '</div>');
-            showStatus(errorMsg, 'error');
-        });
+        // showStatus('All stats updated successfully!', 'success');
     }
 
-    // Update charts with bucket data
+    // Load bucket data (for size charts and table)
+    function loadBucketData(searchFilter = '') {
+        $('#loadingTable').show();
+        $('#dataTable').hide();
+        
+        $.getJSON('{{ url_for("bucket.api_bucket_data") }}', { search: searchFilter })
+            .done(function(data) {
+                updateCharts(data);
+                updateTable(data);
+                $('#resultCount').text(data.length);
+                
+                // وقتی نمودارها آپدیت شدن، آمار کلی رو هم آپدیت کن
+                loadOverviewStats();
+            })
+            .fail(function(xhr) {
+                const errorMsg = xhr.responseJSON?.error || 'Error loading bucket data';
+                $('#loadingTable').html('<div class="text-danger">Error: ' + errorMsg + '</div>');
+                showStatus(errorMsg, 'error');
+            });
+    }
+
+    // Load object count data
+    function loadObjectCountData(searchFilter = '') {
+        $('#objectCountChart').html('<div class="loading">Loading object count data...</div>');
+        
+        $.getJSON('{{ url_for("bucket.api_object_count_data") }}', { search: searchFilter })
+            .done(function(data) {
+                updateObjectCountChart(data);
+            })
+            .fail(function(xhr) {
+                const errorMsg = xhr.responseJSON?.error || 'Error loading object count data';
+                $('#objectCountChart').html('<div class="loading text-danger">Error: ' + errorMsg + '</div>');
+                showStatus(errorMsg, 'error');
+            });
+    }
+
+    // Update size charts with bucket data
     function updateCharts(data) {
         if (data.length === 0) {
             $('#barChart').html('<div class="loading">No data available</div>');
@@ -673,7 +914,7 @@
         const buckets = data.map(item => item.Bucket);
         const sizes = data.map(item => item.Size_GB);
         
-        // Bar Chart
+        // Bar Chart for sizes
         const barTrace = {
             x: buckets,
             y: sizes,
@@ -681,21 +922,31 @@
             marker: {
                 color: buckets.map((_, i) => getColor(i))
             },
-            text: sizes.map(size => size.toFixed(2)),
-            textposition: 'auto'
+            text: sizes.map(size => size.toFixed(2) + ' GB'),
+            textposition: 'auto',
+            hovertemplate: '<b>%{x}</b><br>Size: %{y:.2f} GB<extra></extra>'
         };
         
         const barLayout = {
-            title: 'Bucket Sizes (Bar Chart)',
-            xaxis: { title: 'Bucket', showgrid: false },
-            yaxis: { title: 'Size in GB', showgrid: true, gridcolor: 'lightgray' },
-            plot_bgcolor: 'white'
+            title: 'Bucket Sizes Distribution',
+            xaxis: { 
+                title: 'Bucket',
+                tickangle: -45,
+                showgrid: false
+            },
+            yaxis: { 
+                title: 'Size (GB)', 
+                showgrid: true, 
+                gridcolor: 'lightgray' 
+            },
+            plot_bgcolor: 'white',
+            margin: { b: 100 }
         };
         
         $('#barChart').empty();
         Plotly.newPlot('barChart', [barTrace], barLayout);
         
-        // Pie Chart
+        // Pie Chart for sizes
         const pieTrace = {
             labels: buckets,
             values: sizes,
@@ -703,77 +954,61 @@
             hole: 0.4,
             marker: {
                 colors: buckets.map((_, i) => getColor(i))
-            }
+            },
+            textinfo: 'label+percent',
+            hovertemplate: '<b>%{label}</b><br>Size: %{value:.2f} GB<br>Percentage: %{percent}<extra></extra>'
         };
         
         const pieLayout = {
-            title: 'Bucket Sizes (Pie Chart)'
+            title: 'Bucket Sizes Percentage',
+            showlegend: true
         };
         
         $('#pieChart').empty();
         Plotly.newPlot('pieChart', [pieTrace], pieLayout);
     }
 
-    // Update rate chart
-    function updateRateChart(rateData, startDt, endDt) {
-        if (rateData.length === 0) {
-            $('#rateChart').html('<div class="loading">No rate data available for selected period</div>');
+    // Update object count chart
+    function updateObjectCountChart(data) {
+        if (data.length === 0) {
+            $('#objectCountChart').html('<div class="loading">No object count data available</div>');
             return;
         }
         
-        // Group data by bucket
-        const buckets = {};
-        rateData.forEach(item => {
-            if (!buckets[item.bucket]) {
-                buckets[item.bucket] = [];
-            }
-            buckets[item.bucket].push({
-                time: new Date(item.time),
-                rate: item.Rate_MB_min || 0
-            });
-        });
+        const buckets = data.map(item => item.Bucket);
+        const objectCounts = data.map(item => item.Object_Count);
         
-        const traces = [];
-        Object.keys(buckets).forEach(bucket => {
-            const bucketData = buckets[bucket];
-            bucketData.sort((a, b) => a.time - b.time);
-            
-            traces.push({
-                x: bucketData.map(d => d.time),
-                y: bucketData.map(d => d.rate),
-                mode: 'lines+markers',
-                name: bucket,
-                type: 'scatter'
-            });
-        });
-        
-        const delta = (endDt - startDt) / 1000; // in seconds
-        let tick_sec;
-        if (delta <= 3600) {
-            tick_sec = 300; // 5 minutes
-        } else if (delta <= 6 * 3600) {
-            tick_sec = 1800; // 30 minutes
-        } else if (delta <= 24 * 3600) {
-            tick_sec = 3600; // 1 hour
-        } else {
-            tick_sec = 86400; // 1 day
-        }
-        
-        const layout = {
-            title: `📈 Bucket Ingestion Rate (${formatDateTime(startDt)} to ${formatDateTime(endDt)})`,
-            xaxis: {
-                title: 'Time',
-                range: [startDt, endDt],
-                tickformat: '%H:%M<br>%d-%m',
-                dtick: tick_sec * 1000
+        // Bar Chart for object counts
+        const barTrace = {
+            x: buckets,
+            y: objectCounts,
+            type: 'bar',
+            marker: {
+                color: 'rgb(75, 192, 192)'
             },
-            yaxis: {
-                title: 'Rate (MB/min)'
-            }
+            text: objectCounts.map(count => count.toLocaleString()),
+            textposition: 'auto',
+            hovertemplate: '<b>%{x}</b><br>Objects: %{y:,}<extra></extra>'
         };
         
-        $('#rateChart').empty();
-        Plotly.newPlot('rateChart', traces, layout);
+        const layout = {
+            title: 'Number of Objects per Bucket',
+            xaxis: { 
+                title: 'Bucket',
+                tickangle: -45,
+                showgrid: false
+            },
+            yaxis: { 
+                title: 'Number of Objects',
+                showgrid: true,
+                gridcolor: 'lightgray'
+            },
+            plot_bgcolor: 'white',
+            margin: { b: 100 }
+        };
+        
+        $('#objectCountChart').empty();
+        Plotly.newPlot('objectCountChart', [barTrace], layout);
     }
 
     // Update data table
@@ -782,15 +1017,16 @@
         tableBody.empty();
         
         if (data.length === 0) {
-            $('#loadingTable').html('No buckets found');
+            $('#loadingTable').html('<div class="text-center py-3">No buckets found</div>');
             return;
         }
         
         data.forEach(item => {
             const row = `<tr>
-                <td>${escapeHtml(item.Bucket)}</td>
+                <td><strong>${escapeHtml(item.Bucket)}</strong></td>
                 <td>${formatNumber(item.Size_Bytes)}</td>
-                <td>${item.Size_GB.toFixed(2)}</td>
+                <td>${item.Size_GB.toFixed(2)} GB</td>
+                <td><span class="badge badge-primary">${formatNumber(item.Object_Count)}</span></td>
             </tr>`;
             tableBody.append(row);
         });
@@ -803,17 +1039,15 @@
     function getColor(index) {
         const colors = [
             '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+            '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
+            '#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'
         ];
         return colors[index % colors.length];
     }
     
     function formatNumber(num) {
         return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
-    }
-    
-    function formatDateTime(date) {
-        return date.toLocaleString();
     }
     
     function escapeHtml(unsafe) {
@@ -824,40 +1058,25 @@
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
-    
-    function showWarning(message) {
-        $('#warningMessage').text(message).show();
-    }
-    
-    function hideWarning() {
-        $('#warningMessage').hide();
-    }
 
     // Event listeners
     $(document).ready(function() {
-        initializeDatetime();
-        loadData();
+        loadAllData(); // بارگذاری اولیه همه داده‌ها
         
-        // Auto-refresh every 30 seconds
-        setInterval(loadData, 30000);
+        // Auto-refresh every 60 seconds
+        setInterval(loadAllData, 30000);
         
-        // Event listeners for datetime changes
-        $('#startDate, #startTime, #endDate, #endTime').change(function() {
-            const searchFilter = $('#searchInput').val();
-            loadRateData(searchFilter);
-        });
-        
+        // Search on Enter key
         $('#searchInput').keypress(function(e) {
             if (e.which === 13) { // Enter key
-                loadData();
+                loadAllData();
             }
         });
+        
+        // Show initial status
+        // showStatus('Dashboard loaded successfully!', 'success');
     });
 </script>
 
-<!-- Plotly for charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
 </body>
-
 </html>

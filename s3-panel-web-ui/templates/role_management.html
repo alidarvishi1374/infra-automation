@@ -9,6 +9,8 @@
 <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
+<!-- اضافه کردن SweetAlert2 -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
 <style>
 /* جدول رول‌ها و مدال‌ها */
@@ -21,6 +23,59 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 .page-controls { gap:1rem; align-items:center; display:flex; }
 .page-size { min-width:80px; }
 .no-roles { padding:2rem; text-align:center; color:#6c757d; }
+
+/* استایل جدید برای بخش هدر */
+.page-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 1.5rem;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.search-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.search-section .form-control {
+    min-width: 280px;
+}
+
+/* اصلاح استایل جدول Policies */
+.policy-table {
+    margin-bottom: 0;
+}
+.policy-table thead th {
+    border-bottom: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    padding: 0.75rem;
+}
+.policy-table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+.policy-table-container {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #fff;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-section {
+        justify-content: space-between;
+    }
+    .search-section .form-control {
+        min-width: auto;
+        flex: 1;
+    }
+}
 </style>
 </head>
 <body id="page-top">
@@ -36,7 +91,7 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
             <hr class="sidebar-divider my-0">
 
             <!-- Nav Item - Dashboard -->
-            <li class="nav-item active">
+            <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('bucket.home') }}">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
@@ -112,9 +167,9 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
             {% if user_info.type == "Root Account" %}
 
             <a class="collapse-item" href="{{ url_for('manage.manage_sts_permissions') }}">Admin Permission</a>
-            <a class="collapse-item" href="{{ url_for('manage_iam.manage_roles_page') }}">Role Management</a>
+            <a class="collapse-item active" href="{{ url_for('manage_iam.manage_roles_page') }}">Role Management</a>
              {% endif %}
-            <a class="collapse-item active" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a>
+            <a class="collapse-item" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a>
 
 
         </div>
@@ -172,9 +227,14 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 
       <!-- Page Content -->
       <div class="container-fluid">
-        <div class="d-flex align-items-center mb-3">
-          <button id="createBtn" class="btn btn-success">+ Create Role</button>
-          <div class="ms-auto" style="max-width:280px;">
+        <!-- بخش هدر با طراحی جدید -->
+        <div class="page-header">
+          <button id="createBtn" class="btn btn-success">
+            <i class="fas fa-plus-circle me-2"></i>Create Role
+          </button>
+          
+          <div class="search-section">
+            <i class="fas fa-search text-muted"></i>
             <input id="searchBox" class="form-control" placeholder="Search roles...">
           </div>
         </div>
@@ -229,7 +289,9 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="roleModalTitle">Create Role</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
       <div class="modal-body">
         <form id="roleForm">
@@ -248,7 +310,7 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
       </div>
       <div class="modal-footer">
         <button id="saveRoleBtn" class="btn btn-primary">Save</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
       </div>
     </div>
   </div>
@@ -260,12 +322,14 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="policyModalTitle">Manage Policies</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <div id="policyList" class="policy-list-container">
-            <table class="table table-sm mb-0">
+          <div class="policy-table-container">
+            <table class="table table-sm policy-table mb-0">
               <thead>
                 <tr>
                   <th style="width:70%">Policy Name</th>
@@ -290,7 +354,7 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
       </div>
       <div class="modal-footer">
         <button id="addPolicyBtn" class="btn btn-success">Add / Update Policy</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
@@ -302,14 +366,35 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
     <div class="modal-content border-0">
       <div class="modal-header">
         <h6 class="modal-title">Confirm delete</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
       <div class="modal-body">
         <p id="confirmMessage" class="mb-0">Are you sure?</p>
       </div>
       <div class="modal-footer">
-        <button id="confirmCancel" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
         <button id="confirmDeleteBtn" class="btn btn-danger">Delete Role</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Logout Modal -->
+<div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+        <a class="btn btn-primary" href="{{ url_for('auth.logout') }}">Logout</a>
       </div>
     </div>
   </div>
@@ -322,6 +407,9 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+<!-- اضافه کردن SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
 <script>
 /* ====== State ====== */
 let roles = [];
@@ -362,7 +450,6 @@ function showToast(type, message) {
   toast.innerHTML = `
     <div class="d-flex">
       <div class="toast-body">${message}</div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>`;
   toastContainer.appendChild(toast);
   const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
@@ -506,6 +593,59 @@ async function onEditPolicy(policyName){
   }
 }
 
+// تابع جدید برای حذف policy با SweetAlert2
+async function onDeletePolicy(policyName){
+  const result = await Swal.fire({
+    title: 'Delete Policy?',
+    html: `Are you sure you want to delete policy <strong>"${policyName}"</strong> from role <strong>"${currentPolicyRole}"</strong>?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel',
+    background: '#f8f9fa',
+    backdrop: 'rgba(0,0,0,0.4)',
+    customClass: {
+      popup: 'border-radius-12',
+      confirmButton: 'btn-danger',
+      cancelButton: 'btn-secondary'
+    }
+  });
+
+  if (result.isConfirmed) {
+    try {
+      const res = await fetch(`/api/role/${encodeURIComponent(currentPolicyRole)}/policy/${encodeURIComponent(policyName)}`, { 
+        method: 'DELETE' 
+      });
+      const j = await res.json();
+      if (j.error) {
+        await Swal.fire({
+          title: 'Error!',
+          text: j.error,
+          icon: 'error',
+          confirmButtonColor: '#d33'
+        });
+      } else {
+        await Swal.fire({
+          title: 'Deleted!',
+          text: 'Policy has been deleted.',
+          icon: 'success',
+          confirmButtonColor: '#3085d6'
+        });
+        onManagePolicies(currentPolicyRole);
+      }
+    } catch(err) {
+      await Swal.fire({
+        title: 'Error!',
+        text: 'Failed to delete policy: ' + err.message,
+        icon: 'error',
+        confirmButtonColor: '#d33'
+      });
+    }
+  }
+}
+
 addPolicyBtn.addEventListener('click', async ()=>{
   const name = policyNameInput.value.trim();
   if (!name){ showToast('danger', 'Policy name required'); return; }
@@ -525,18 +665,6 @@ addPolicyBtn.addEventListener('click', async ()=>{
     showToast('danger', 'Failed to save policy: ' + err.message);
   }
 });
-
-async function onDeletePolicy(policyName){
-  if (!confirm(`Delete policy "${policyName}"?`)) return;
-  try {
-    const res = await fetch(`/api/role/${encodeURIComponent(currentPolicyRole)}/policy/${encodeURIComponent(policyName)}`, { method: 'DELETE' });
-    const j = await res.json();
-    if (j.error) showToast('danger', j.error);
-    else { showToast('success', 'Policy deleted'); onManagePolicies(currentPolicyRole); }
-  } catch(err){
-    showToast('danger', 'Failed to delete policy: ' + err.message);
-  }
-}
 
 /* ====== Search & page size ====== */
 searchBox.addEventListener('input', ()=>{
@@ -581,8 +709,8 @@ async function onEditClick(e){
     const trust = j.assumeRolePolicy || j.role && j.role.AssumeRolePolicyDocument;
     trustJsonInput.value = JSON.stringify(trust || {}, null, 2);
     document.getElementById('modalAlert').innerHTML = '';
-    saveRoleBtn.innerText = 'Update Trust';
-    roleModal.show();
+  saveRoleBtn.innerText = 'Update Trust';
+  roleModal.show();
   } catch(err) {
     showToast('danger', 'Failed to fetch role: ' + err.message);
   }
@@ -623,9 +751,11 @@ function onDeleteClick(e){
   const name = decodeURIComponent(encName);
   deleteTarget = name;
   confirmMessageEl.textContent = `Are you sure you want to delete role "${name}"? This cannot be undone.`;
+  confirmDeleteBtn.textContent = 'Delete Role';
   confirmModal.show();
 }
 
+// هندلر برای حذف role
 confirmDeleteBtn.addEventListener('click', async ()=>{
   if (!deleteTarget) return;
   try {
@@ -647,6 +777,7 @@ window.onEditClick = onEditClick;
 window.onDeleteClick = onDeleteClick;
 window.onManagePolicies = onManagePolicies;
 window.onEditPolicy = onEditPolicy;
+window.onDeletePolicy = onDeletePolicy;
 </script>
 </body>
 </html>

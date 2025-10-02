@@ -1,117 +1,154 @@
 # helpers/dashboard.py
-import boto3, sqlite3, pandas as pd, threading, time, json
+import boto3
+import os
 from botocore.client import Config
-from datetime import datetime, timedelta
 from flask import session
 
-DB_FILE = "bucket_history.db"
-
-# S3 client
-def get_s3_client():
+# ======================
+# S3 Client Functions
+# ======================
+def get_s3_client(access_key=None, secret_key=None, endpoint_url=None):
+    """
+    ایجاد S3 client - اگر credentials داده نشده از session استفاده میکنه
+    """
+    if access_key is None:
+        # اگر خارج از context request هستیم
+        try:
+            access_key = session.get("access_key")
+            secret_key = session.get("secret_key")
+            endpoint_url = session.get("endpoint_url")
+        except RuntimeError:
+            # خارج از context - از متغیرهای محیطی استفاده کن
+            access_key = os.getenv('AWS_ACCESS_KEY_ID')
+            secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+            endpoint_url = os.getenv('AWS_ENDPOINT_URL')
+    
+    if not access_key or not secret_key:
+        raise ValueError("AWS credentials not available")
+    
     return boto3.client(
         "s3",
-        aws_access_key_id=session.get("access_key"),
-        aws_secret_access_key=session.get("secret_key"),
-        endpoint_url=session.get("endpoint_url"),
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        endpoint_url=endpoint_url,
         config=Config(signature_version="s3v4"),
         region_name="us-east-1"
     )
 
 # ======================
-# DB init
+# Bucket Operations
 # ======================
-def init_db():
-    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS bucket_history (
-        time TIMESTAMP,
-        bucket TEXT,
-        size_gb REAL
-    )
-    """)
-    conn.commit()
-    conn.close()
-init_db()
-
-# ======================
-# Bucket & rate funcs
-# ======================
-def get_bucket_size(bucket_name):
-    s3 = get_s3_client()
+def get_bucket_size_and_count(bucket_name, access_key=None, secret_key=None, endpoint_url=None):
+    """
+    محاسبه حجم و تعداد objectهای یک bucket
+    """
+    s3 = get_s3_client(access_key, secret_key, endpoint_url)
     total_size = 0
+    total_objects = 0
     continuation_token = None
-    while True:
-        if continuation_token:
-            response = s3.list_objects_v2(Bucket=bucket_name, ContinuationToken=continuation_token)
-        else:
-            response = s3.list_objects_v2(Bucket=bucket_name)
-        for obj in response.get("Contents", []):
-            total_size += obj["Size"]
-        if response.get("IsTruncated"):
-            continuation_token = response["NextContinuationToken"]
-        else:
-            break
-    return total_size
+    
+    try:
+        while True:
+            list_params = {'Bucket': bucket_name}
+            if continuation_token:
+                list_params['ContinuationToken'] = continuation_token
+            
+            response = s3.list_objects_v2(**list_params)
+            
+            if 'Contents' in response:
+                for obj in response['Contents']:
+                    total_size += obj.get("Size", 0)
+                    total_objects += 1
+            
+            if response.get("IsTruncated"):
+                continuation_token = response["NextContinuationToken"]
+            else:
+                break
+                
+    except Exception as e:
+        print(f"Error processing bucket {bucket_name}: {e}")
+    
+    return total_size, total_objects
 
 def get_bucket_data(search_filter=""):
-    s3 = get_s3_client()
-    all_buckets = s3.list_buckets()["Buckets"]
-    bucket_sizes = []
-    for bucket in all_buckets:
-        name = bucket["Name"]
-        if not search_filter or search_filter.lower() in name.lower():
-            size_bytes = get_bucket_size(name)
-            size_gb = size_bytes / (1024**3)
-            bucket_sizes.append({"Bucket": name, "Size_Bytes": size_bytes, "Size_GB": size_gb})
-    if not search_filter:
-        bucket_sizes.sort(key=lambda x: x["Size_Bytes"], reverse=True)
-        bucket_sizes = bucket_sizes[:5]
-    return bucket_sizes
-
-def update_database():
-    s3 = get_s3_client()
-    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-    cursor = conn.cursor()
-    now = datetime.now()
-    for bucket in s3.list_buckets()["Buckets"]:
-        name = bucket["Name"]
-        size_gb = get_bucket_size(name) / (1024**3)
-        cursor.execute("INSERT INTO bucket_history (time, bucket, size_gb) VALUES (?, ?, ?)", (now, name, size_gb))
-    cursor.execute("DELETE FROM bucket_history WHERE time < ?", (now - timedelta(days=7),))
-    conn.commit()
-    conn.close()
-
-def get_rate_data(start_dt, end_dt, search_filter=""):
-    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-    if search_filter:
-        hist = pd.read_sql_query(
-            "SELECT * FROM bucket_history WHERE time BETWEEN ? AND ? AND bucket LIKE ? ORDER BY time",
-            conn, parse_dates=["time"], params=[start_dt, end_dt, f"%{search_filter}%"]
-        )
-    else:
-        hist = pd.read_sql_query(
-            "SELECT * FROM bucket_history WHERE time BETWEEN ? AND ? ORDER BY time",
-            conn, parse_dates=["time"], params=[start_dt, end_dt]
-        )
-    conn.close()
-    if hist.empty:
+    """
+    گرفتن اطلاعات تمام buckets شامل حجم و تعداد objectها
+    برای نمودارها - اگر فیلتر نباشد فقط 5 تا بزرگترین رو برمی‌گرداند
+    """
+    try:
+        s3 = get_s3_client()
+        all_buckets = s3.list_buckets().get("Buckets", [])
+        bucket_data = []
+        
+        for bucket in all_buckets:
+            name = bucket["Name"]
+            
+            # اگر فیلتر جستجو داریم و bucket مطابقت ندارد، ردش کن
+            if search_filter and search_filter.lower() not in name.lower():
+                continue
+                
+            size_bytes, object_count = get_bucket_size_and_count(name)
+            size_gb = size_bytes / (1024 ** 3)
+            
+            bucket_data.append({
+                "Bucket": name, 
+                "Size_Bytes": size_bytes, 
+                "Size_GB": round(size_gb, 2),
+                "Object_Count": object_count
+            })
+        
+        # اگر فیلتر جستجو نداریم، فقط 5 تا بزرگترین رو برگردون (برای نمودارها)
+        if not search_filter:
+            bucket_data.sort(key=lambda x: x["Size_Bytes"], reverse=True)
+            bucket_data = bucket_data[:5]
+            
+        return bucket_data
+        
+    except Exception as e:
+        print(f"Error in get_bucket_data: {e}")
         return []
-    hist = hist.sort_values(["bucket","time"]).reset_index(drop=True)
-    hist["Rate_MB_min"] = hist.groupby("bucket")["size_gb"].diff() * 1024
-    hist["Rate_MB_min"] = hist["Rate_MB_min"].fillna(0)
-    return hist.to_dict("records")
 
-# Background thread
-def start_background_thread():
-    def loop():
-        while True:
-            try:
-                update_database()
-                time.sleep(30)
-            except Exception as e:
-                print(f"Background thread error: {e}")
-                time.sleep(30)
-    t = threading.Thread(target=loop, daemon=True)
-    t.start()
-start_background_thread()
+def get_all_buckets_stats():
+    """
+    گرفتن آمار کامل همه buckets (بدون محدودیت)
+    برای نمایش تعداد کل و حجم کل
+    """
+    try:
+        s3 = get_s3_client()
+        all_buckets = s3.list_buckets().get("Buckets", [])
+        bucket_data = []
+        
+        for bucket in all_buckets:
+            name = bucket["Name"]
+            size_bytes, object_count = get_bucket_size_and_count(name)
+            size_gb = size_bytes / (1024 ** 3)
+            
+            bucket_data.append({
+                "Bucket": name, 
+                "Size_Bytes": size_bytes, 
+                "Size_GB": round(size_gb, 2),
+                "Object_Count": object_count
+            })
+            
+        return bucket_data
+        
+    except Exception as e:
+        print(f"Error in get_all_buckets_stats: {e}")
+        return []
+    
+def get_object_count_data(search_filter=""):
+    """
+    گرفتن داده‌های تعداد object برای نمودار
+    """
+    bucket_data = get_bucket_data(search_filter)
+    
+    # فقط داده‌های مورد نیاز برای نمودار object count
+    object_count_data = []
+    for bucket in bucket_data:
+        object_count_data.append({
+            "Bucket": bucket["Bucket"],
+            "Object_Count": bucket["Object_Count"]
+        })
+    
+    return object_count_data
+

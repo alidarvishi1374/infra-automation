@@ -1,52 +1,103 @@
+
 from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, json
 from helpers.auth import login_required
 from helpers.aws import get_buckets_info, get_user_type, create_bucket,get_iam_client
 from helpers.aws import get_s3_client
 from botocore.exceptions import ClientError
-from helpers.dashboard import get_bucket_data, get_rate_data, update_database
-from datetime import datetime
+from helpers.dashboard import get_object_count_data, get_bucket_data , get_bucket_size_and_count
 from flask import request, jsonify
 
 bucket_bp = Blueprint("bucket", __name__)
 
-
+@bucket_bp.route("/api/overview_stats", methods=["GET"])
+@login_required
+def api_overview_stats():
+    """API برای گرفتن تمام آمار کلی"""
+    try:
+        # آمار S3 - همه buckets رو مستقیماً از S3 بگیر
+        s3 = get_s3_client()
+        all_buckets = s3.list_buckets().get("Buckets", [])
+        bucket_count = len(all_buckets)
+        
+        # محاسبه حجم کل همه buckets
+        total_size_bytes = 0
+        for bucket in all_buckets:
+            size_bytes, _ = get_bucket_size_and_count(bucket["Name"])
+            total_size_bytes += size_bytes
+        
+        total_size_mb = total_size_bytes / (1024 * 1024)  # بایت به مگابایت
+        
+        # آمار IAM
+        iam_client = get_iam_client(
+            session["access_key"],
+            session["secret_key"], 
+            session["endpoint_url"]
+        )
+        
+        # تعداد IAM Users
+        try:
+            users_resp = iam_client.list_users()
+            iam_users_count = len(users_resp.get("Users", []))
+        except Exception:
+            iam_users_count = 0
+        
+        # تعداد IAM Groups
+        try:
+            groups_resp = iam_client.list_groups()
+            iam_groups_count = len(groups_resp.get("Groups", []))
+        except Exception:
+            iam_groups_count = 0
+        
+        return jsonify({
+            "bucket_count": bucket_count,
+            "total_size_mb": round(total_size_mb, 2),
+            "iam_users_count": iam_users_count,
+            "iam_groups_count": iam_groups_count
+        })
+    except Exception as e:
+        print(f"Error in api_overview_stats: {e}")
+        return jsonify({"error": "Failed to get overview stats"}), 500
+    
 @bucket_bp.route("/api/bucket_data", methods=["GET"])
 @login_required
 def api_bucket_data():
+    """API برای گرفتن داده‌های کامل buckets (حجم و تعداد object)"""
     search_filter = request.args.get("search", "").strip()
-    return jsonify(get_bucket_data(search_filter))
-
-@bucket_bp.route("/api/rate_data", methods=["GET"])
-@login_required
-def api_rate_data():
-    start_date = request.args.get("start_date")
-    start_time = request.args.get("start_time")
-    end_date = request.args.get("end_date")
-    end_time = request.args.get("end_time")
-    search_filter = request.args.get("search", "").strip()
-
+    
     try:
-        start_dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
-        end_dt = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+        bucket_data = get_bucket_data(search_filter)
+        return jsonify(bucket_data)
     except Exception as e:
-        return jsonify({"error": "Invalid date/time"}), 400
+        print(f"Error in api_bucket_data: {e}")
+        return jsonify({"error": "Failed to get bucket data"}), 500
 
-    return jsonify(get_rate_data(start_dt, end_dt, search_filter))
-
-@bucket_bp.route("/api/update_database", methods=["GET"])
+@bucket_bp.route("/api/object_count_data", methods=["GET"])
 @login_required
-def api_update_database():
-    update_database()
-    return jsonify({"status": "success"})
+def api_object_count_data():
+    """API برای گرفتن داده‌های تعداد objectهای هر bucket"""
+    search_filter = request.args.get("search", "").strip()
+    
+    try:
+        object_count_data = get_object_count_data(search_filter)
+        return jsonify(object_count_data)
+    except Exception as e:
+        print(f"Error in api_object_count_data: {e}")
+        return jsonify({"error": "Failed to get object count data"}), 500
 
+# ======================
+# Page Routes
+# ======================
 @bucket_bp.route("/home")
 @login_required
 def home():
-    # S3 Buckets
-    buckets_info = get_buckets_info()
-    bucket_count = len(buckets_info)
-    total_size = sum(bucket["Size"] for bucket in buckets_info)
-
+    # استفاده از get_bucket_data برای محاسبه حجم واقعی
+    bucket_data = get_bucket_data("")  # بدون فیلتر برای گرفتن همه buckets
+    bucket_count = len(bucket_data)
+    
+    # محاسبه حجم کل از داده‌های واقعی
+    total_size_gb = sum(bucket["Size_GB"] for bucket in bucket_data)
+    total_size_mb = total_size_gb * 1024  # تبدیل به مگابایت
+    
     # User info
     user_info = get_user_type(
         session["access_key"], 
@@ -77,18 +128,17 @@ def home():
         print(f"Error fetching IAM groups: {e}")
         iam_groups_count = 0
 
-
     return render_template(
         "index.html", 
         bucket_count=bucket_count, 
-        total_size=total_size, 
+        total_size=round(total_size_mb, 2),  # نمایش به مگابایت
         iam_users_count=iam_users_count,
         iam_groups_count=iam_groups_count,
         user_info=user_info,
         dashboard_api_bucket_url=url_for("bucket.api_bucket_data"),
-        dashboard_api_rate_url=url_for("bucket.api_rate_data"),
-        dashboard_api_update_url=url_for("bucket.api_update_database")
+        dashboard_api_object_count_url=url_for("bucket.api_object_count_data")
     )
+
 
 @bucket_bp.route("/buckets")
 @login_required
@@ -99,12 +149,6 @@ def buckets():
     return render_template("tables.html", buckets=buckets_info, user_info=user_info)
 
 
-@bucket_bp.route("/charts")
-@login_required
-def charts():
-    user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
-    return render_template("charts.html", user_info=user_info)
-
 
 @bucket_bp.route("/tables")
 @login_required
@@ -112,11 +156,6 @@ def tables():
     return redirect(url_for("bucket.buckets"))
 
 
-@bucket_bp.route("/not_found")
-@login_required
-def not_found():
-    user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
-    return render_template("404.html", user_info=user_info)
 
 @bucket_bp.route("/create_bucket", methods=["POST"])
 @login_required
@@ -224,6 +263,7 @@ def toggle_versioning():
 @bucket_bp.route("/api/get_bucket_versioning")
 @login_required
 def get_bucket_versioning():
+    session.pop("buckets_info", None)
     bucket_name = request.args.get("bucket_name")
     s3 = get_s3_client()
     try:
@@ -341,6 +381,7 @@ def get_bucket_tags():
 @bucket_bp.route("/get_bucket_policies", methods=["POST", "GET"])
 @login_required
 def get_bucket_policies():
+    session.pop("buckets_info", None)
     bucket_name = request.get_json().get("bucket_name") if request.method=="POST" else request.args.get("bucket_name")
     if not bucket_name:
         return jsonify({"success": False, "message": "Bucket name required"}), 400
@@ -359,6 +400,7 @@ def get_bucket_policies():
 @bucket_bp.route("/set_bucket_policy", methods=["POST"])
 @login_required
 def add_bucket_policy():
+    session.pop("buckets_info", None)
     data = request.get_json(silent=True) or {}
     bucket_name = data.get("bucket_name")
     policy = data.get("policy")
@@ -442,6 +484,7 @@ def set_bucket_lifecycle():
 @bucket_bp.route("/delete_bucket_lifecycle", methods=["POST"])
 @login_required
 def delete_bucket_lifecycle():
+    session.pop("buckets_info", None)
     data = request.get_json(silent=True) or {}
     bucket_name = data.get("bucket_name")
     if not bucket_name:
@@ -450,7 +493,6 @@ def delete_bucket_lifecycle():
     s3 = get_s3_client()
     try:
         s3.delete_bucket_lifecycle(Bucket=bucket_name) 
-        session.pop("buckets_info", None)
         return jsonify({"success": True, "message": f"✅ Lifecycle deleted from {bucket_name}"})
     except ClientError as e:
         code = e.response.get("Error", {}).get("Code")
@@ -521,6 +563,38 @@ def get_bucket_replication():
         return jsonify({"success": False, "message": str(e)}), 400
     except Exception as e:
         return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500
+    
+@bucket_bp.route("/delete_bucket_replication", methods=["POST"])
+@login_required
+def delete_bucket_replication():
+    """
+    Delete replication configuration from a bucket.
+    Expects JSON: { "bucket_name": "example-bucket" }
+    """
+    data = request.get_json(silent=True) or {}
+    bucket_name = data.get("bucket_name")
+
+    if not bucket_name:
+        return jsonify({"success": False, "message": "❌ Bucket name is required."}), 400
+
+    s3 = get_s3_client()
+    try:
+        s3.delete_bucket_replication(Bucket=bucket_name)
+        # refresh cache
+        session.pop("buckets_info", None)
+        return jsonify({"success": True, "message": f"✅ Replication rules deleted from {bucket_name}"})
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = e.response.get("Error", {}).get("Message", str(e))
+        
+        # اگر replication configuration وجود نداشته باشد
+        if error_code in ("ReplicationConfigurationNotFoundError", "NoSuchReplicationConfiguration"):
+            return jsonify({"success": True, "message": "No replication configuration found"})
+        
+        return jsonify({"success": False, "message": f"❌ {error_code}: {error_msg}"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": f"❌ Unexpected error: {str(e)}"}), 500
+
 @bucket_bp.route("/configure_locking", methods=["POST"])
 @login_required
 def configure_locking():
