@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, session,jsonify,request, flash, redirect, url_for
+from flask import Blueprint, render_template, session, jsonify, request, flash, redirect, url_for
 from helpers.auth import login_required
-from helpers.aws import get_user_type, list_iam_users, create_iam_user, list_access_keys, create_access_key, delete_iam_user
-import boto3
+from helpers.aws import get_user_type, list_iam_users, create_iam_user, list_access_keys, create_access_key, delete_iam_user, disable_access_key, delete_access_key
+import boto3, json
+from botocore.exceptions import ClientError
+
 
 user_bp = Blueprint("user", __name__)
 
@@ -50,23 +52,92 @@ def iam_users():
         user_copy = u.copy()
         user_copy["ActiveKeysCount"] = active_count
         user_copy["ActiveKeysError"] = active_error
+        
+        # اطلاعات گروه‌ها (اگر لازمه)
+        try:
+            iam = boto3.client(
+                "iam",
+                aws_access_key_id=session["access_key"],
+                aws_secret_access_key=session["secret_key"],
+                endpoint_url=session["endpoint_url"],
+                region_name="us-east-1"
+            )
+            groups_response = iam.list_groups_for_user(UserName=username)
+            user_copy["Groups"] = [g['GroupName'] for g in groups_response['Groups']]
+        except Exception as e:
+            user_copy["Groups"] = []
+        
         enriched_users.append(user_copy)
 
     return render_template("iam_users.html", user_info=user_info, iam_users=enriched_users)
-
 
 @user_bp.route("/create_user", methods=["POST"])
 @login_required
 def create_user():
     user_name = request.form.get("username")
+    enable_panel_access = request.form.get("enable_panel_access") == 'true'
     endpoint = session.get("endpoint_url")
     access_key = session.get("access_key")
     secret_key = session.get("secret_key")
     region = "us-east-1"
 
+    # اول کاربر رو ایجاد می‌کنیم
     result = create_iam_user(endpoint, access_key, secret_key, user_name, region)
+    
+    # اگر ایجاد کاربر موفق بود و گزینه panel access فعال بود
+    if result.get("success") and enable_panel_access:
+        try:
+            # حالا policy رو attach می‌کنیم
+            policy_result = attach_getuser_policy(access_key, secret_key, endpoint, user_name, region)
+            if not policy_result.get("ok"):
+                # اگر attach policy شکست خورد، پیام خطا رو به نتیجه اضافه می‌کنیم
+                result["message"] += f" But failed to attach panel access policy: {policy_result.get('error', 'Unknown error')}"
+            else:
+                result["message"] += " with panel access enabled"
+        except Exception as e:
+            result["message"] += f" But failed to attach panel access policy: {str(e)}"
+    
     return jsonify(result)
 
+
+def attach_getuser_policy(root_access_key, root_secret_key, endpoint_url, target_username, region_name=""):
+    try:
+        iam = boto3.client(
+            "iam",
+            aws_access_key_id=root_access_key,
+            aws_secret_access_key=root_secret_key,
+            endpoint_url=endpoint_url,
+            region_name=region_name
+        )
+
+        # پالیسی ساده که فقط اجازه iam:GetUser روی یوزر مشخص رو میده
+        policy_document = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "iam:GetUser",
+                    "Resource": f"arn:aws:iam::*:user/{target_username}"
+                }
+            ]
+        }
+
+        policy_name = f"AllowGetUserOnly-{target_username}"
+
+        iam.put_user_policy(
+            UserName=target_username,
+            PolicyName=policy_name,
+            PolicyDocument=json.dumps(policy_document)
+        )
+        return {
+            "ok": True,
+            "message": f"Inline policy '{policy_name}' attached to user '{target_username}'."
+        }
+    except ClientError as e:
+        return {"ok": False, "error": e.response['Error']['Message']}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+    
 @user_bp.route("/user_keys/<username>", methods=["GET"])
 @login_required
 def user_keys(username):
@@ -186,3 +257,155 @@ def delete_user():
 
     result = delete_iam_user(endpoint, access_key, secret_key, user_name)
     return jsonify(result)
+
+# ========== USER POLICY MANAGEMENT ==========
+
+@user_bp.route("/get_user_inline_policies", methods=["GET"])
+@login_required
+def get_user_inline_policies():
+    username = request.args.get("username")
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=session["access_key"],
+        aws_secret_access_key=session["secret_key"],
+        endpoint_url=session["endpoint_url"],
+        region_name="us-east-1"
+    )
+    try:
+        resp = iam_client.list_user_policies(UserName=username)
+        policies = []
+        for pname in resp.get("PolicyNames", []):
+            p = iam_client.get_user_policy(UserName=username, PolicyName=pname)
+            policies.append({
+                "PolicyName": pname,
+                "PolicyDocument": p["PolicyDocument"]
+            })
+        return jsonify(success=True, policies=policies)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+@user_bp.route("/delete_user_inline_policy", methods=["POST"])
+@login_required
+def delete_user_inline_policy():
+    data = request.get_json()
+    username = data.get("username")
+    policy_name = data.get("policy_name")
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=session["access_key"],
+        aws_secret_access_key=session["secret_key"],
+        endpoint_url=session["endpoint_url"],
+        region_name="us-east-1"
+    )
+    try:
+        iam_client.delete_user_policy(UserName=username, PolicyName=policy_name)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+@user_bp.route("/add_user_inline_policy", methods=["POST"])
+@login_required
+def add_user_inline_policy():
+    data = request.get_json()
+    username = data.get("username")
+    policy_name = data.get("policy_name")
+    policy_document = data.get("policy_document")
+
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=session["access_key"],
+        aws_secret_access_key=session["secret_key"],
+        endpoint_url=session["endpoint_url"],
+        region_name="us-east-1"
+    )
+
+    try:
+        iam_client.put_user_policy(
+            UserName=username,
+            PolicyName=policy_name,
+            PolicyDocument=json.dumps(policy_document)
+        )
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+@user_bp.route("/update_user_inline_policy", methods=["POST"])
+@login_required
+def update_user_inline_policy():
+    data = request.get_json()
+    username = data.get("username")
+    policy_name = data.get("policy_name")
+    policy_document = data.get("policy_document")
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=session["access_key"],
+        aws_secret_access_key=session["secret_key"],
+        endpoint_url=session["endpoint_url"],
+        region_name="us-east-1"
+    )
+    try:
+        iam_client.put_user_policy(
+            UserName=username,
+            PolicyName=policy_name,
+            PolicyDocument=json.dumps(policy_document)
+        )
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+@user_bp.route("/get_attached_user_policies", methods=["GET"])
+@login_required
+def get_attached_user_policies():
+    username = request.args.get("username")
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=session["access_key"],
+        aws_secret_access_key=session["secret_key"],
+        endpoint_url=session["endpoint_url"],
+        region_name="us-east-1"
+    )
+    try:
+        attached_policies = iam_client.list_attached_user_policies(UserName=username).get("AttachedPolicies", [])
+        return jsonify(success=True, policies=attached_policies)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+@user_bp.route("/attach_user_policy", methods=["POST"])
+@login_required
+def attach_user_policy():
+    data = request.get_json()
+    username = data.get("username")
+    policy_arn = data.get("policy_arn")
+
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=session["access_key"],
+        aws_secret_access_key=session["secret_key"],
+        endpoint_url=session["endpoint_url"],
+        region_name="us-east-1"
+    )
+    try:
+        iam_client.attach_user_policy(UserName=username, PolicyArn=policy_arn)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+@user_bp.route("/detach_user_policy", methods=["POST"])
+@login_required
+def detach_user_policy():
+    data = request.get_json()
+    username = data.get("username")
+    policy_arn = data.get("policy_arn")
+
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=session["access_key"],
+        aws_secret_access_key=session["secret_key"],
+        endpoint_url=session["endpoint_url"],
+        region_name="us-east-1"
+    )
+    try:
+        iam_client.detach_user_policy(UserName=username, PolicyArn=policy_arn)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e))

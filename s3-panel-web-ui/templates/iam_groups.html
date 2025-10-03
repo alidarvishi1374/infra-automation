@@ -193,9 +193,10 @@
                                         <th>Group Name</th>
                                         <th>ARN</th>
                                         <th>Members</th>
-                                        <th>Actions</th>
                                         <th>Inline Group Policy</th>
                                         <th>Attached Policies</th>
+                                        <th>Actions</th>
+
 
                                     </tr>
                                 </thead>
@@ -213,16 +214,6 @@
                                                 <span class="badge badge-secondary">No Members</span>
                                             {% endif %}
                                         </td>
-                                        <td class="d-flex justify-content-center">
-                                            <button class="btn btn-sm btn-outline-primary flex-fill mx-1 manage-members-btn"
-                                                data-group="{{ group.GroupName }}">
-                                                <i class="fas fa-user-plus"></i> Manage Members
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger flex-fill mx-1 delete-group-btn"
-                                                data-group="{{ group.GroupName }}">
-                                                <i class="fas fa-trash"></i> Delete Group
-                                            </button>
-                                        </td>
                                         <td>
                                             <button class="btn btn-sm btn-info view-inline-policies-btn" data-group="{{ group.GroupName }}">
                                                 <i class="fas fa-file-code"></i> View
@@ -234,6 +225,18 @@
 </button>
 
                                         </td>
+
+
+                                                   <td class="d-flex justify-content-center">
+                                            <button class="btn btn-sm btn-outline-primary flex-fill mx-1 manage-members-btn"
+                                                data-group="{{ group.GroupName }}">
+                                                <i class="fas fa-user-plus"></i> Manage Members
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger flex-fill mx-1 delete-group-btn"
+                                                data-group="{{ group.GroupName }}">
+                                                <i class="fas fa-trash"></i> Delete Group
+                                            </button>
+                                        </td>                             
                                     </tr>
                                     {% endfor %}
                                 </tbody>

@@ -11,7 +11,7 @@ def is_valid_url(url):
         return False
 
 
-def check_credentials(access_key=None, secret_key=None, endpoint_url=None):
+def check_credentials(access_key=None, secret_key=None, endpoint_url=None, region_name=""):
     if endpoint_url and not is_valid_url(endpoint_url):
         return False, "Endpoint URL is invalid!, please use http or https"
 
@@ -21,15 +21,27 @@ def check_credentials(access_key=None, secret_key=None, endpoint_url=None):
             aws_secret_access_key=secret_key,
         ) if access_key and secret_key else boto3.Session()
 
-        s3 = boto_sess.client("s3", endpoint_url=endpoint_url)
-        s3.list_buckets()
-        return True, None
+        iam = boto_sess.client("iam", endpoint_url=endpoint_url, region_name=region_name)
+
+        # تست می‌کنیم ببینیم می‌تونه get_user بزنه یا نه
+        resp = iam.get_user()
+        user = resp.get("User", {})
+        return True, {
+            "UserName": user.get("UserName"),
+            "UserId": user.get("UserId"),
+            "Arn": user.get("Arn"),
+        }
+
     except NoCredentialsError:
         return False, "AWS credentials not found!"
     except PartialCredentialsError:
         return False, "Incomplete AWS credentials!"
     except ClientError as e:
-        msg = e.response.get('Error', {}).get('Message', "Invalid AWS credentials or insufficient permissions.")
+        code = e.response.get("Error", {}).get("Code")
+        msg = e.response.get("Error", {}).get("Message", "Invalid AWS credentials or insufficient permissions.")
+        # اگر کد AccessDenied باشه یعنی credential هست، ولی اجازه‌ی get_user نداره
+        if code == "AccessDenied":
+            return False, "AccessDenied: Invalid AWS credentials or insufficient permissions"
         return False, msg
     except Exception as e:
         return False, f"Unexpected error: {str(e)}"
@@ -411,3 +423,4 @@ def get_iam_client(access_key=None, secret_key=None, endpoint_url=None, region_n
         endpoint_url=endpoint_url,
         region_name=region_name
     )
+
