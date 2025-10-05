@@ -1,0 +1,104 @@
+/* Objects specific styles */
+.folder-icon { 
+    color: #FFD700; 
+    font-size: 1.4rem; 
+    margin-right: 10px; 
+    transition: transform 0.2s, color 0.2s; 
+}
+
+.folder-row { 
+    background-color: white; 
+    transition: background-color 0.2s; 
+    cursor: pointer; 
+}
+
+.folder-row:hover { 
+    transform: scale(1.02); 
+    background-color: #fff8dc; 
+}
+
+.file-icon { 
+    color: #4A90E2; 
+    font-size: 1.2rem; 
+    margin-right: 8px; 
+    transition: transform 0.2s, color 0.2s; 
+}
+
+.file-row { 
+    background-color: white; 
+    transition: background-color 0.2s; 
+}
+
+.file-row:hover { 
+    transform: scale(1.01); 
+    background-color: #f0f8ff; 
+}
+
+.bucket-card .card { 
+    transition: transform 0.2s, box-shadow 0.2s; 
+    cursor: pointer; 
+}
+
+.bucket-card .card:hover { 
+    transform: translateY(-5px) scale(1.03); 
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2); 
+}
+
+.bucket-card .fa-hdd { 
+    color: #FFD700; 
+    transition: transform 0.3s; 
+}
+
+.bucket-card .card:hover .fa-hdd { 
+    transform: scale(1.2) rotate(-10deg); 
+}
+
+/* Flash messages styling */
+.flash-messages {
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding: 1rem;
+    z-index: 1060;
+}
+
+.flash-alert {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 8px;
+}
+
+/* Breadcrumb styling */
+.breadcrumb-nav {
+    background: #f8f9fa;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+}
+
+/* Upload card styling */
+.upload-card {
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.upload-card:hover {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+/* Pagination styling */
+.custom-pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.custom-pagination .page-link {
+    color: #007bff;
+    border: 1px solid #dee2e6;
+}
+
+.custom-pagination .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}

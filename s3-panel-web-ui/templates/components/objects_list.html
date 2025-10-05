@@ -1,0 +1,103 @@
+<!-- Breadcrumb / Back to root -->
+<div class="mb-3 breadcrumb-nav">
+    <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name) }}" class="btn btn-secondary btn-sm"><i class="fas fa-home"></i> Root</a>
+    {% if prefix %}
+        {% set parts = prefix.rstrip('/').split('/') %}
+        {% if parts|length > 1 %}
+        <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix='/'.join(parts[:-1]) + '/') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Upload Card -->
+<div class="card shadow-sm border-0 mb-4 animate__animated animate__fadeInUp upload-card">
+    <div class="card-header bg-gradient-success text-white py-2">
+        <h6 class="m-0 font-weight-bold"><i class="fas fa-upload"></i> Upload File</h6>
+    </div>
+    <div class="card-body">
+        <div id="customAlert" class="alert alert-danger d-none" role="alert"></div>
+
+        <form id="uploadForm" action="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix=prefix) }}" 
+              method="POST" enctype="multipart/form-data" class="form-inline">
+            
+            <div class="form-group mb-2 me-2">
+                <input type="file" id="fileInput" name="file" class="form-control-file">
+            </div>
+            
+            <div class="form-group mb-2 me-2">
+                <input type="text" name="folder" class="form-control" placeholder="Optional folder name">
+            </div>
+            
+            <input type="hidden" name="prefix" value="{{ prefix }}">
+            
+            <button type="button" id="uploadBtn" class="btn btn-success mb-2">
+                <i class="fas fa-cloud-upload-alt"></i> Upload
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="mb-3">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search folders and files...">
+</div>
+
+<!-- List Objects in Bucket -->
+<div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
+    <div class="card-header py-3 bg-gradient-primary text-white">
+        <h6 class="m-0 font-weight-bold">Objects in {{ bucket_name }}</h6>
+    </div>
+    <div class="card-body">
+        <table id="objectTable" class="table table-hover table-striped table-bordered align-middle text-center">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Size (Bytes)</th>
+                    <th>Last Modified</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for folder in folders %}
+                <tr class="folder-row animate__animated animate__fadeInLeft">
+                    <td><i class="fas fa-folder folder-icon"></i> 
+                        <a href="{{ url_for('objects.list_objects', bucket_name=bucket_name, prefix=prefix + folder + '/') }}">{{ folder }}</a>
+                    </td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                {% endfor %}
+                {% for file in files %}
+                <tr class="file-row animate__animated animate__fadeInRight">
+                    <td><i class="fas fa-file file-icon"></i> {{ file.Key }}</td>
+                    <td>{{ file.Size }}</td>
+                    <td>{{ file.LastModified.strftime("%Y-%m-%d %H:%M:%S") if file.LastModified else '-' }}</td>
+                    <td>
+                        <a href="{{ url_for('objects.download_object', bucket_name=bucket_name, key=file.Key) }}" class="btn btn-sm btn-success" title="Download"><i class="fas fa-download"></i></a>
+                        <form action="{{ url_for('objects.delete_object', bucket_name=bucket_name, key=file.Key) }}" method="POST" style="display:inline;" class="delete-form" data-key="{{ file.Key }}" data-prefix="{{ prefix }}">
+                            <button type="button" class="btn btn-sm btn-danger deleteBtn" title="Delete"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                Show 
+                <select id="rowsPerPageSelect" class="form-control d-inline-block" style="width:auto;">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+                entries
+            </div>
+            <nav>
+                <ul id="pagination" class="pagination mb-0 custom-pagination"></ul>
+            </nav>
+        </div>
+    </div>
+</div>

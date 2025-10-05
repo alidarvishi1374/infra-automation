@@ -1,0 +1,20 @@
+<form class="user" method="POST" action="{{ url_for('auth.login') }}">
+    <input type="hidden" name="next" value="{{ next or '' }}">
+    <div class="form-group">
+        <input type="text" class="form-control form-control-user" name="access_key" placeholder="Access key">
+    </div>
+    <div class="form-group">
+        <input type="password" class="form-control form-control-user" name="secret_key" placeholder="Secret key">
+    </div>
+    <div class="form-group">
+        <input type="text" class="form-control form-control-user" name="endpoint_url" placeholder="Endpoint Url">
+    </div>
+    <div class="form-group">
+        <div class="custom-control custom-checkbox small">
+            <input type="checkbox" class="custom-control-input" id="customCheck">
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-user btn-block">
+        Login
+    </button>
+</form>

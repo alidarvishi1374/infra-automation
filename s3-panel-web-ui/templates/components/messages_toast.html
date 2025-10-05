@@ -1,0 +1,15 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    {% for category, msg in messages %}
+    <div aria-live="polite" aria-atomic="true" 
+         style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000;">
+        <div class="toast bg-{{ 'danger' if category == 'danger' else 'success' }} text-white" role="alert">
+            <div class="toast-header bg-{{ 'danger' if category == 'danger' else 'success' }} text-white">
+                <strong class="me-auto">Login {{ category|capitalize }}</strong>
+            </div>
+            <div class="toast-body">{{ msg }}</div>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+{% endwith %}

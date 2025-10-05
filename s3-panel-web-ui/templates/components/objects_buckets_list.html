@@ -1,0 +1,41 @@
+<!-- List Buckets as cards -->
+<div class="mb-3">
+    <input type="text" id="bucketSearchInput" class="form-control" placeholder="Search buckets...">
+</div>
+
+<div class="card shadow-lg border-0 rounded-lg animate__animated animate__fadeIn">
+    <div class="card-header py-3 bg-gradient-primary text-white">
+        <h6 class="m-0 font-weight-bold">Bucket List</h6>
+    </div>
+    <div class="card-body">
+        <div class="row" id="bucketList">
+            {% for bucket in buckets %}
+            <div class="col-md-3 mb-3">
+                <a href="{{ url_for('objects.list_objects', bucket_name=bucket.Name) }}" class="bucket-card text-decoration-none text-dark">
+                    <div class="card h-100 shadow-sm border-0 animate__animated animate__zoomIn">
+                        <div class="card-body text-center">
+                            <i class="fas fa-hdd fa-3x mb-3"></i>
+                            <h6 class="card-title">{{ bucket.Name }}</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                Show
+                <select id="bucketsPerPageSelect" class="form-control d-inline-block" style="width:auto;">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                </select>
+                buckets
+            </div>
+            <nav>
+                <ul id="bucketsPagination" class="pagination mb-0 custom-pagination"></ul>
+            </nav>
+        </div>
+    </div>
+</div>

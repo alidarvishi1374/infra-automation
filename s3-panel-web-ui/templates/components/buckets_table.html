@@ -1,0 +1,102 @@
+<div class="card shadow-lg border-0 rounded-lg">
+    <div class="card-header py-3 bg-gradient-primary text-white">
+        <h6 class="m-0 font-weight-bold">Buckets List</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table id="bucketsTable" class="table table-hover table-striped table-bordered align-middle text-center">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Bucket Name</th>
+                        <th>Region</th>
+                        <th>Creation Date</th>
+                        <th>Versioning</th>
+                        <th>Size (MB)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bucket in buckets %}
+                    <tr>
+                        <td>
+                            <div class="text-center">
+                                <!-- Bucket Name -->
+                                <div class="mb-2">
+                                    <span class="badge badge-primary badge-lg px-3 py-2">
+                                        <i class="fas fa-cube mr-2"></i>{{ bucket.Name }}
+                                    </span>
+                                </div>
+                                
+                                <!-- Bucket Tags -->
+                                <div class="bucket-tags-pretty">
+                                    {% if bucket.Tags %}
+                                        <div class="tags-container">
+                                            {% for tag in bucket.Tags %}
+                                                <span class="tag-pretty">
+                                                    <i class="fas fa-tag mr-1"></i>
+                                                    <span class="tag-text">{{ tag.Key }}: {{ tag.Value }}</span>
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="no-tags-pretty">
+                                            <i class="fas fa-tag mr-1"></i>
+                                            <small>No tags</small>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ bucket.Region }}</td>
+                        <td>{{ bucket.CreationDate }}</td>
+                        <td>
+                            {% if bucket.Versioning %}
+                                <span class="badge badge-success px-3 py-2">
+                                    <i class="fas fa-check-circle mr-2"></i>Enabled
+                                </span>
+                            {% else %}
+                                <span class="badge badge-secondary px-3 py-2">
+                                    <i class="fas fa-times-circle mr-2"></i>Disabled
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td data-sort="{{ bucket.Size if bucket.Size else 0 }}">{{ bucket.Size if bucket.Size else 0 }}</td>
+                        <td>
+                            <div class="text-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-primary dropdown-toggle action-btn" type="button" 
+                                            id="dropdownMenuButton-{{ bucket.Name }}" data-toggle="dropdown" 
+                                            aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-cog"></i> Actions
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right shadow" aria-labelledby="dropdownMenuButton-{{ bucket.Name }}">
+                                        <a class="dropdown-item manage-tags-btn" href="#" data-bucket="{{ bucket.Name }}">
+                                            <i class="fas fa-tags text-warning"></i> Manage Tags
+                                        </a>
+                                        <a class="dropdown-item policy-btn" href="#" data-bucket="{{ bucket.Name }}">
+                                            <i class="fas fa-file-contract text-info"></i> Bucket Policy
+                                        </a>
+                                        <a class="dropdown-item lifecycle-btn" href="#" data-bucket="{{ bucket.Name }}">
+                                            <i class="fas fa-recycle text-warning"></i> Lifecycle
+                                        </a>
+                                        <a class="dropdown-item replication-btn" href="#" data-bucket="{{ bucket.Name }}">
+                                            <i class="fas fa-random text-success"></i> Replication
+                                        </a>
+                                        <a class="dropdown-item versioning-btn" href="#" data-bucket="{{ bucket.Name }}">
+                                            <i class="fas fa-sync-alt text-secondary"></i> Toggle Versioning
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item delete-bucket-btn text-danger" href="#" data-bucket="{{ bucket.Name }}">
+                                            <i class="fas fa-trash"></i> Delete Bucket
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
