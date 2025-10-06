@@ -384,7 +384,6 @@
                            <option value="ap-south-1">Asia Pacific (Mumbai)</option>
                         </select>
                      </div>
-                     <!-- گزینه Enable Panel Access -->
                     <div class="form-group">
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="enablePanelAccess" name="enable_panel_access" checked>
@@ -749,7 +748,6 @@ function viewUserInlinePolicies(username) {
         if (resp.success) {
             let rows = "";
             resp.policies.forEach(p => {
-                // استفاده از encodeURIComponent برای جلوگیری از مشکلات JSON
                 const encodedDoc = encodeURIComponent(JSON.stringify(p.PolicyDocument));
                 rows += `
                   <tr>
@@ -780,7 +778,6 @@ $(document).on("click", ".edit-user-policy-btn", function() {
     const encodedDoc = $(this).data("policy-doc");
     
     try {
-        // decode کردن JSON
         const policyDoc = JSON.parse(decodeURIComponent(encodedDoc));
         editUserPolicy(policyName, policyDoc);
     } catch (e) {
@@ -793,12 +790,10 @@ function editUserPolicy(name, doc) {
     editingUserPolicy = name;
     $("#userPolicyNameInput").val(name);
     
-    // نمایش JSON با فرمت زیبا
     $("#userPolicyDocumentInput").val(JSON.stringify(doc, null, 2));
     $("#userPolicyEditorSection").show();
 }
 
-// Delete User Policy با event delegation
 $(document).on("click", ".delete-user-policy-btn", function() {
     const policyName = $(this).data("policy-name");
     deleteUserPolicy(policyName);
@@ -952,7 +947,6 @@ function openUserAttachedPoliciesModal(username) {
     $("#userAttachedPoliciesModal").modal("show");
 }
 
-// Detach User Policy با event delegation
 $(document).on("click", ".detach-user-policy-btn", function() {
     const policyArn = $(this).data("policy-arn");
     detachUserPolicy(policyArn);

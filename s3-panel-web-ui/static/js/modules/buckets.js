@@ -1,5 +1,4 @@
 $(document).ready(function() {
-    // فعال کردن DataTables با قابلیت سورت برای همه ستون‌ها
     const table = $('#bucketsTable').DataTable({
         "paging": true,
         "pageLength": 10,
@@ -26,8 +25,8 @@ $(document).ready(function() {
         },
         "columnDefs": [
             {
-                "targets": [4], // ستون Size (ایندکس 4)
-                "type": "num", // نوع عددی برای سورت کردن
+                "targets": [4], 
+                "type": "num",
                 "render": function(data, type, row) {
                     if (type === 'sort' || type === 'type') {
                         return parseFloat(data) || 0;
@@ -36,42 +35,39 @@ $(document).ready(function() {
                 }
             },
             {
-                "targets": [3], // ستون Versioning
+                "targets": [3], 
                 "type": "string",
                 "render": function(data, type, row) {
                     if (type === 'sort' || type === 'type') {
-                        // بررسی مستقیم محتوای HTML برای تشخیص وضعیت versioning
                         return data.includes('badge-success') ? 1 : 0;
                     }
                     return data;
                 }
             },
             {
-                "targets": [0], // ستون Bucket Name
+                "targets": [0], 
                 "orderable": true
             },
             {
-                "targets": [1], // ستون Region
+                "targets": [1], 
                 "orderable": true
             },
             {
-                "targets": [2], // ستون Creation Date
+                "targets": [2], 
                 "orderable": true,
                 "type": "date"
             },
             {
-                "targets": [5], // ستون Actions
-                "orderable": false // غیرفعال کردن سورت برای ستون Actions
+                "targets": [5],
+                "orderable": false 
             }
         ],
-        "order": [[0, "asc"]], // سورت پیش‌فرض بر اساس نام bucket
+        "order": [[0, "asc"]],
         "drawCallback": function(settings) {
-            // فعال کردن tooltip پس از هر بار رسم جدول
             $('[data-toggle="tooltip"]').tooltip();
         }
     });
 
-    // فعال کردن tooltip
     $('[data-toggle="tooltip"]').tooltip();
 
     // Create Bucket
@@ -179,7 +175,6 @@ $(document).ready(function() {
         });
     });
 
-    // Toggle Versioning - نسخه اصلاح شده
     $(document).on("click", ".versioning-btn", function() {
         const bucketName = $(this).data("bucket");
         const $btn = $(this);
@@ -187,7 +182,6 @@ $(document).ready(function() {
         
         $btn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
 
-        // پیدا کردن ردیف مربوطه در جدول
         const $row = $btn.closest('tr');
         const $versioningBadge = $row.find('td').eq(3).find('.badge');
         const isCurrentlyEnabled = $versioningBadge.hasClass('badge-success');
@@ -574,7 +568,6 @@ $(document).ready(function() {
     let currentReplicationBucket = null;
     let currentReplicationRaw = null;
 
-    // تابع برای باز کردن مودال replication
     function openReplicationModal(bucketName) {
         currentReplicationBucket = bucketName;
         $("#replicationBucketName").text(bucketName);
@@ -599,7 +592,6 @@ $(document).ready(function() {
             });
     }
 
-    // Event handler برای دکمه‌های replication
     $(document).on("click", ".replication-btn", function(e) {
         e.stopPropagation();
         const bucketName = $(this).data("bucket");

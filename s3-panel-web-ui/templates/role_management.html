@@ -9,11 +9,9 @@
 <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
-<!-- اضافه کردن SweetAlert2 -->
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
 <style>
-/* جدول رول‌ها و مدال‌ها */
 body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 .card { border-radius: 12px; box-shadow: 0 6px 18px rgba(39,55,77,0.06); }
 .table-hover tbody tr:hover { transform: translateY(-3px); background: #f1f7ff; transition: all .18s ease; }
@@ -24,7 +22,6 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 .page-size { min-width:80px; }
 .no-roles { padding:2rem; text-align:center; color:#6c757d; }
 
-/* استایل جدید برای بخش هدر */
 .page-header { 
     display: flex; 
     justify-content: space-between; 
@@ -43,7 +40,6 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
     min-width: 280px;
 }
 
-/* اصلاح استایل جدول Policies */
 .policy-table {
     margin-bottom: 0;
 }
@@ -227,7 +223,6 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 
       <!-- Page Content -->
       <div class="container-fluid">
-        <!-- بخش هدر با طراحی جدید -->
         <div class="page-header">
           <button id="createBtn" class="btn btn-success">
             <i class="fas fa-plus-circle me-2"></i>Create Role
@@ -407,7 +402,6 @@ body { font-family: 'Inter', sans-serif; background:#f5f7fb; }
 <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
-<!-- اضافه کردن SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
 <script>
@@ -593,7 +587,6 @@ async function onEditPolicy(policyName){
   }
 }
 
-// تابع جدید برای حذف policy با SweetAlert2
 async function onDeletePolicy(policyName){
   const result = await Swal.fire({
     title: 'Delete Policy?',
@@ -755,7 +748,6 @@ function onDeleteClick(e){
   confirmModal.show();
 }
 
-// هندلر برای حذف role
 confirmDeleteBtn.addEventListener('click', async ()=>{
   if (!deleteTarget) return;
   try {

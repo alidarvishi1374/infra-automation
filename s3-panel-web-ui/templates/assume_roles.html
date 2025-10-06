@@ -459,9 +459,9 @@
         toast.classList.remove('success','error','warn','show');
         toast.classList.add(type);
 
-        if(type==='success') toast.style.backgroundColor = '#0b3d91'; // آبی پررنگ
-        if(type==='error') toast.style.backgroundColor = '#b91c1c'; // قرمز پررنگ
-        if(type==='warn') toast.style.backgroundColor = '#f59e0b'; // نارنجی
+        if(type==='success') toast.style.backgroundColor = '#0b3d91'; 
+        if(type==='error') toast.style.backgroundColor = '#b91c1c';
+        if(type==='warn') toast.style.backgroundColor = '#f59e0b';
 
         requestAnimationFrame(() => toast.classList.add('show'));
         if (window._toastTimer) clearTimeout(window._toastTimer);
