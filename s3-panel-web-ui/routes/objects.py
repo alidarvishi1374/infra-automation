@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, session, jsonify, request, flash, redirect, url_for, send_file
+from flask import Blueprint, render_template, session, jsonify, request, flash, redirect, url_for, send_file, abort
 from helpers.auth import login_required
 import boto3
 from io import BytesIO
 from helpers.aws import get_user_type
+import botocore.exceptions
 
 
 object_bp = Blueprint("objects", __name__) 
@@ -17,7 +18,6 @@ def get_s3_client():
         region_name="us-east-1"
     )
 
-# نمایش همه باکت‌ها
 @object_bp.route("/objects", methods=["GET"])
 @login_required
 def all_buckets():
@@ -26,10 +26,15 @@ def all_buckets():
     try:
         response = s3.list_buckets()
         buckets = response.get("Buckets", [])
-    except Exception as e:
-        flash(f"Error listing buckets: {str(e)}", "danger")
+    except botocore.exceptions.ClientError as e:
+        code = e.response["Error"]["Code"]
+        if code == "AccessDenied":
+            abort(403)  # ⛔ مستقیم برو صفحه 403
+        flash(f"Error listing buckets: {e.response['Error']['Message']}", "danger")
         buckets = []
-    
+    except Exception as e:
+        flash(f"Unexpected error: {str(e)}", "danger")
+        buckets = []
 
     return render_template(
         "objects.html",
@@ -47,7 +52,6 @@ def list_objects(bucket_name):
     s3 = get_s3_client()
     prefix = request.args.get("prefix") or request.form.get("prefix", "").strip()
     user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
-
 
     # --- آپلود فایل ---
     if request.method == "POST" and "file" in request.files:
@@ -78,6 +82,12 @@ def list_objects(bucket_name):
             # آپلود فایل
             s3.upload_fileobj(file, bucket_name, key)
             flash(f"✅ '{file.filename}' uploaded successfully to '{key}'", "success")
+        except botocore.exceptions.ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            if error_code == "AccessDenied":
+                abort(403)  # 🔥 مستقیماً به صفحه 403 می‌ره
+            else:
+                flash(f"❌ Upload failed: {e.response['Error']['Message']}", "danger")
         except Exception as e:
             flash(f"❌ Upload failed: {str(e)}", "danger")
 
@@ -87,20 +97,28 @@ def list_objects(bucket_name):
     files, folders = [], set()
     try:
         response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix, Delimiter="/")
+
         # فولدرها
         for folder_prefix in response.get("CommonPrefixes", []):
             folder_name = folder_prefix.get("Prefix", "").rstrip("/").split("/")[-1]
             if folder_name:
                 folders.add(folder_name)
+
         # فایل‌ها
         for obj in response.get("Contents", []):
             key = obj["Key"]
             rest = key[len(prefix):] if prefix else key
             if rest and "/" not in rest:
                 files.append(obj)
-    except Exception as e:
-        flash(f"Error listing objects: {str(e)}", "danger")
 
+    except botocore.exceptions.ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "AccessDenied":
+            abort(403)  # 🔥 مستقیم به صفحه Access Denied
+        else:
+            flash(f"Error listing objects: {e.response['Error']['Message']}", "danger")
+
+    # --- رندر صفحه ---
     return render_template(
         "objects.html",
         bucket_name=bucket_name,
@@ -109,6 +127,7 @@ def list_objects(bucket_name):
         prefix=prefix,
         user_info=user_info
     )
+
 
 # دانلود آبجکت
 @object_bp.route("/buckets/<bucket_name>/objects/download/<path:key>")

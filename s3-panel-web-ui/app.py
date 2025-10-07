@@ -1,4 +1,5 @@
-from flask import Flask
+from flask import Flask, render_template, session
+from helpers.aws import get_user_type
 from routes.auth_routes import auth_bp
 from routes.bucket_routes import bucket_bp
 from routes.user_routes import user_bp
@@ -24,7 +25,16 @@ def create_app():
     app.register_blueprint(manage_bp)
     app.register_blueprint(manage_iam_bp)
     app.register_blueprint(assume_bp)
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        user_info = get_user_type(
+            session["access_key"], 
+            session["secret_key"], 
+            session["endpoint_url"]
+        )
+        return render_template("403.html", user_info=user_info), 403
     return app
+
 
 
 if __name__ == "__main__":

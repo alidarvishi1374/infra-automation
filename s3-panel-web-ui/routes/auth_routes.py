@@ -19,7 +19,7 @@ def login():
                 "secret_key": secret_key,
                 "endpoint_url": endpoint_url
             })
-            return redirect(url_for("bucket.home", success="Login successful!"))
+            return redirect(url_for("bucket.buckets", success="Login successful!"))
         flash(error_msg, "danger")
         return redirect(url_for("auth.login"))
 
@@ -31,3 +31,8 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
+
+
+# HD9UBM5R1BBCHPUM56UN
+
+# Nx4Jh5FbBxkmmL2Bdqq7dmBbCH2DnItTts9Aa1Np

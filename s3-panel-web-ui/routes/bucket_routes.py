@@ -1,11 +1,12 @@
 
-from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, json
+from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify, json, abort
 from helpers.auth import login_required
 from helpers.aws import get_buckets_info, get_user_type, create_bucket,get_iam_client
 from helpers.aws import get_s3_client
 from botocore.exceptions import ClientError
 from helpers.dashboard import get_object_count_data, get_bucket_data , get_bucket_size_and_count
 from flask import request, jsonify
+import botocore.exceptions
 
 bucket_bp = Blueprint("bucket", __name__)
 
@@ -143,10 +144,22 @@ def home():
 @bucket_bp.route("/buckets")
 @login_required
 def buckets():
-    session.pop("buckets_info", None)
-    buckets_info = get_buckets_info()
-    user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
-    return render_template("tables.html", buckets=buckets_info, user_info=user_info)
+    try:
+        session.pop("buckets_info", None)
+        buckets_info = get_buckets_info()
+        user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
+        return render_template("tables.html", buckets=buckets_info, user_info=user_info)
+    except botocore.exceptions.ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "AccessDenied":
+            abort(403)  # منتقل به صفحه‌ی خطای 403
+        else:
+            flash(f"AWS Error: {error_code}", "danger")
+            return redirect(url_for("auth.login"))
+
+    except Exception as e:
+        flash(f"Unexpected error: {str(e)}", "danger")
+        return redirect(url_for("auth.login"))
 
 
 
