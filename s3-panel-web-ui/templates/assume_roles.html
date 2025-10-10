@@ -51,7 +51,7 @@
             <hr class="sidebar-divider my-0">
 
             <!-- Nav Item - Dashboard -->
-            <li class="nav-item active">
+            <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('bucket.home') }}">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span></a>
@@ -128,9 +128,10 @@
 
             <a class="collapse-item" href="{{ url_for('manage.manage_sts_permissions') }}">Admin Permission</a>
             <a class="collapse-item" href="{{ url_for('manage_iam.manage_roles_page') }}">Role Management</a>
-             {% endif %}
+            {% endif %}
+            {% if user_info.type != "Root Account" %}
             <a class="collapse-item active" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a>
-
+             {% endif %}
 
         </div>
 

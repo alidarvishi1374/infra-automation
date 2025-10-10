@@ -15,7 +15,7 @@ def get_s3_client():
         aws_access_key_id=session.get("access_key"),
         aws_secret_access_key=session.get("secret_key"),
         endpoint_url=session.get("endpoint_url"),
-        region_name="us-east-1"
+        region_name="default"
     )
 
 @object_bp.route("/objects", methods=["GET"])
@@ -29,7 +29,7 @@ def all_buckets():
     except botocore.exceptions.ClientError as e:
         code = e.response["Error"]["Code"]
         if code == "AccessDenied":
-            abort(403)  # ⛔ مستقیم برو صفحه 403
+            abort(403)
         flash(f"Error listing buckets: {e.response['Error']['Message']}", "danger")
         buckets = []
     except Exception as e:
@@ -53,23 +53,19 @@ def list_objects(bucket_name):
     prefix = request.args.get("prefix") or request.form.get("prefix", "").strip()
     user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
 
-    # --- آپلود فایل ---
     if request.method == "POST" and "file" in request.files:
         file = request.files["file"]
         folder = request.form.get("folder", "").strip().strip("/")
 
-        # بررسی نام فایل
         if not file.filename:
             flash("❌ File name is empty", "danger")
             return redirect(url_for("objects.list_objects", bucket_name=bucket_name, prefix=prefix))
 
-        # بررسی کاراکترهای معتبر برای فولدر
         import re
         if folder and not re.match(r'^[\w\-\./]*$', folder):
             flash("❌ Folder name contains invalid characters", "danger")
             return redirect(url_for("objects.list_objects", bucket_name=bucket_name, prefix=prefix))
 
-        # ساخت کلید (Key) صحیح
         key_parts = []
         if prefix:
             key_parts.append(prefix.rstrip("/"))
@@ -79,13 +75,12 @@ def list_objects(bucket_name):
         key = "/".join(key_parts)
 
         try:
-            # آپلود فایل
             s3.upload_fileobj(file, bucket_name, key)
             flash(f"✅ '{file.filename}' uploaded successfully to '{key}'", "success")
         except botocore.exceptions.ClientError as e:
             error_code = e.response["Error"]["Code"]
             if error_code == "AccessDenied":
-                abort(403)  # 🔥 مستقیماً به صفحه 403 می‌ره
+                abort(403)  
             else:
                 flash(f"❌ Upload failed: {e.response['Error']['Message']}", "danger")
         except Exception as e:
@@ -93,18 +88,15 @@ def list_objects(bucket_name):
 
         return redirect(url_for("objects.list_objects", bucket_name=bucket_name, prefix=prefix))
 
-    # --- گرفتن لیست فایل‌ها و فولدرها ---
     files, folders = [], set()
     try:
         response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix, Delimiter="/")
 
-        # فولدرها
         for folder_prefix in response.get("CommonPrefixes", []):
             folder_name = folder_prefix.get("Prefix", "").rstrip("/").split("/")[-1]
             if folder_name:
                 folders.add(folder_name)
 
-        # فایل‌ها
         for obj in response.get("Contents", []):
             key = obj["Key"]
             rest = key[len(prefix):] if prefix else key
@@ -114,11 +106,10 @@ def list_objects(bucket_name):
     except botocore.exceptions.ClientError as e:
         error_code = e.response["Error"]["Code"]
         if error_code == "AccessDenied":
-            abort(403)  # 🔥 مستقیم به صفحه Access Denied
+            abort(403)
         else:
             flash(f"Error listing objects: {e.response['Error']['Message']}", "danger")
 
-    # --- رندر صفحه ---
     return render_template(
         "objects.html",
         bucket_name=bucket_name,
@@ -129,7 +120,6 @@ def list_objects(bucket_name):
     )
 
 
-# دانلود آبجکت
 @object_bp.route("/buckets/<bucket_name>/objects/download/<path:key>")
 @login_required
 def download_object(bucket_name, key):
@@ -145,7 +135,6 @@ def download_object(bucket_name, key):
         flash(f"Download failed: {str(e)}", "danger")
         return redirect(url_for("objects.list_objects", bucket_name=bucket_name))
 
-# حذف آبجکت
 @object_bp.route("/buckets/<bucket_name>/objects/delete/<path:key>", methods=["POST"])
 @login_required
 def delete_object(bucket_name, key):
@@ -158,7 +147,6 @@ def delete_object(bucket_name, key):
         flash(f"❌ Delete failed: {str(e)}", "danger")
     return redirect(url_for("objects.list_objects", bucket_name=bucket_name, prefix=prefix))
 
-# رفتن به فولدر
 @object_bp.route("/buckets/<bucket_name>/objects/folders/<path:folder>")
 @login_required
 def view_folder(bucket_name, folder):

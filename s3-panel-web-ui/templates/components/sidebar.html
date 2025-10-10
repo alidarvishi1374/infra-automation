@@ -7,12 +7,14 @@
         <div class="sidebar-brand-text mx-3">S3 Panel</div>
     </a>
 
+    {% set endpoint = request.endpoint %}
+
     <!-- Divider -->
     {% if user_info.type == "Root Account" %}
     <hr class="sidebar-divider my-0">
 
     <!-- Nav Item - Dashboard -->
-    <li class="nav-item active">
+    <li class="nav-item {% if endpoint == 'bucket.home' %}active{% endif %}">
         <a class="nav-link" href="{{ url_for('bucket.home') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
             <span>Dashboard</span></a>
@@ -28,29 +30,29 @@
     </div>
 
     <!-- Nav Item - Pages Collapse Menu -->
-    <li class="nav-item">
+    <li class="nav-item {% if endpoint.startswith('bucket.') and endpoint != 'bucket.home' %}active{% endif %}">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseBuckets"
             aria-expanded="true" aria-controls="collapseBuckets">
             <i class="fa fa-cubes" aria-hidden="true"></i>
             <span>Buckets</span>
         </a>
-        <div id="collapseBuckets" class="collapse" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
+        <div id="collapseBuckets" class="collapse {% if endpoint.startswith('bucket.') and endpoint != 'bucket.home' %}show{% endif %}" aria-labelledby="headingBuckets" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item" href="{{ url_for('bucket.buckets') }}">Buckets</a>
+                <a class="collapse-item {% if endpoint.startswith('bucket.') and endpoint != 'bucket.home' %}active{% endif %}" href="{{ url_for('bucket.buckets') }}">Buckets</a>
             </div>
         </div>
     </li>
 
     <!-- Nav Item - Objects Collapse Menu -->
-    <li class="nav-item">
+    <li class="nav-item {% if endpoint.startswith('objects.') %}active{% endif %}">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseObjects"
             aria-expanded="true" aria-controls="collapseObjects">
             <i class="fas fa-database"></i>
             <span>Objects</span>
         </a>
-        <div id="collapseObjects" class="collapse" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
+        <div id="collapseObjects" class="collapse {% if endpoint.startswith('objects.') %}show{% endif %}" aria-labelledby="headingObjects" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item" href="{{ url_for('objects.all_buckets') }}">Objects</a>
+                <a class="collapse-item {% if endpoint.startswith('objects.') %}active{% endif %}" href="{{ url_for('objects.all_buckets') }}">Objects</a>
             </div>
         </div>
     </li>
@@ -96,8 +98,9 @@
                 <a class="collapse-item" href="{{ url_for('manage.manage_sts_permissions') }}">Admin Permission</a>
                 <a class="collapse-item" href="{{ url_for('manage_iam.manage_roles_page') }}">Role Management</a>
                  {% endif %}
-                <a class="collapse-item" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a>
-            </div>
+              {% if user_info.type != "Root Account" %}
+              <a class="collapse-item" href="{{ url_for('assume_roles.assume_roles_page') }}">Assume Role</a">
+              {% endif %}            </div>
         </div>
     </li>
 

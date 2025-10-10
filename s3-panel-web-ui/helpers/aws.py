@@ -23,7 +23,6 @@ def check_credentials(access_key=None, secret_key=None, endpoint_url=None, regio
 
         iam = boto_sess.client("iam", endpoint_url=endpoint_url, region_name=region_name)
 
-        # تست می‌کنیم ببینیم می‌تونه get_user بزنه یا نه
         resp = iam.get_user()
         user = resp.get("User", {})
         return True, {
@@ -39,7 +38,6 @@ def check_credentials(access_key=None, secret_key=None, endpoint_url=None, regio
     except ClientError as e:
         code = e.response.get("Error", {}).get("Code")
         msg = e.response.get("Error", {}).get("Message", "Invalid AWS credentials or insufficient permissions.")
-        # اگر کد AccessDenied باشه یعنی credential هست، ولی اجازه‌ی get_user نداره
         if code == "AccessDenied":
             return False, "AccessDenied: Invalid AWS credentials or insufficient permissions"
         return False, msg
@@ -209,7 +207,6 @@ def list_iam_users(access_key_id, secret_access_key, endpoint_url, session_token
 
     return users_info
 
-from botocore.exceptions import ClientError
 
 def create_iam_user(endpoint, access_key, secret_key, user_name, region=None):
     session = boto3.session.Session(

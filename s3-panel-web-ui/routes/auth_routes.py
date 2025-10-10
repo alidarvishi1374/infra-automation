@@ -31,8 +31,3 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
-
-
-# HD9UBM5R1BBCHPUM56UN
-
-# Nx4Jh5FbBxkmmL2Bdqq7dmBbCH2DnItTts9Aa1Np

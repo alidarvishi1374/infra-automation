@@ -33,7 +33,7 @@ def get_s3_client():
     access_key = session.get("access_key")
     secret_key = session.get("secret_key")
     endpoint_url = session.get("endpoint_url")
-    region_name = session.get("region_name", "us-east-1")
+    region_name = session.get("region_name", "default")
 
     if not access_key or not secret_key:
         raise ValueError("AWS credentials not found in session")

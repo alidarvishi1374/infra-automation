@@ -6,18 +6,14 @@ import boto3
 s3_select_bp = Blueprint("s3_select", __name__)
 
 def get_s3_client():
-    """ساخت boto3 client با استفاده از session"""
     return boto3.client(
         "s3",
         aws_access_key_id=session.get("access_key"),
         aws_secret_access_key=session.get("secret_key"),
         endpoint_url=session.get("endpoint_url"),
-        region_name="us-east-1"
+        region_name="default"
     )
 
-# ======================
-# صفحه اصلی S3 Select
-# ======================
 @s3_select_bp.route("/s3_select")
 @login_required
 def s3_select_page():
@@ -28,9 +24,6 @@ def s3_select_page():
     )
     return render_template("s3_select.html", user_info=user_info)
 
-# ======================
-# لیست باکت‌ها
-# ======================
 @s3_select_bp.route("/list-buckets")
 @login_required
 def list_buckets():
@@ -42,9 +35,6 @@ def list_buckets():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ======================
-# لیست آبجکت‌های یک باکت
-# ======================
 @s3_select_bp.route("/list-objects")
 @login_required
 def list_objects():
@@ -60,9 +50,6 @@ def list_objects():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ======================
-# اجرای Query روی آبجکت
-# ======================
 @s3_select_bp.route("/run-query", methods=["POST"])
 @login_required
 def run_query():
@@ -98,7 +85,6 @@ def run_query():
             }
         )
 
-        # جمع کردن نتایج
         output = ""
         for event in response["Payload"]:
             if "Records" in event:

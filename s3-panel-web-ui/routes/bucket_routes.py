@@ -13,36 +13,30 @@ bucket_bp = Blueprint("bucket", __name__)
 @bucket_bp.route("/api/overview_stats", methods=["GET"])
 @login_required
 def api_overview_stats():
-    """API برای گرفتن تمام آمار کلی"""
     try:
-        # آمار S3 - همه buckets رو مستقیماً از S3 بگیر
         s3 = get_s3_client()
         all_buckets = s3.list_buckets().get("Buckets", [])
         bucket_count = len(all_buckets)
         
-        # محاسبه حجم کل همه buckets
         total_size_bytes = 0
         for bucket in all_buckets:
             size_bytes, _ = get_bucket_size_and_count(bucket["Name"])
             total_size_bytes += size_bytes
         
-        total_size_mb = total_size_bytes / (1024 * 1024)  # بایت به مگابایت
+        total_size_mb = total_size_bytes / (1024 * 1024)
         
-        # آمار IAM
         iam_client = get_iam_client(
             session["access_key"],
             session["secret_key"], 
             session["endpoint_url"]
         )
         
-        # تعداد IAM Users
         try:
             users_resp = iam_client.list_users()
             iam_users_count = len(users_resp.get("Users", []))
         except Exception:
             iam_users_count = 0
         
-        # تعداد IAM Groups
         try:
             groups_resp = iam_client.list_groups()
             iam_groups_count = len(groups_resp.get("Groups", []))
@@ -62,7 +56,6 @@ def api_overview_stats():
 @bucket_bp.route("/api/bucket_data", methods=["GET"])
 @login_required
 def api_bucket_data():
-    """API برای گرفتن داده‌های کامل buckets (حجم و تعداد object)"""
     search_filter = request.args.get("search", "").strip()
     
     try:
@@ -75,7 +68,6 @@ def api_bucket_data():
 @bucket_bp.route("/api/object_count_data", methods=["GET"])
 @login_required
 def api_object_count_data():
-    """API برای گرفتن داده‌های تعداد objectهای هر bucket"""
     search_filter = request.args.get("search", "").strip()
     
     try:
@@ -85,19 +77,14 @@ def api_object_count_data():
         print(f"Error in api_object_count_data: {e}")
         return jsonify({"error": "Failed to get object count data"}), 500
 
-# ======================
-# Page Routes
-# ======================
 @bucket_bp.route("/home")
 @login_required
 def home():
-    # استفاده از get_bucket_data برای محاسبه حجم واقعی
-    bucket_data = get_bucket_data("")  # بدون فیلتر برای گرفتن همه buckets
+    bucket_data = get_bucket_data("")
     bucket_count = len(bucket_data)
     
-    # محاسبه حجم کل از داده‌های واقعی
     total_size_gb = sum(bucket["Size_GB"] for bucket in bucket_data)
-    total_size_mb = total_size_gb * 1024  # تبدیل به مگابایت
+    total_size_mb = total_size_gb * 1024 
     
     # User info
     user_info = get_user_type(
@@ -152,7 +139,7 @@ def buckets():
     except botocore.exceptions.ClientError as e:
         error_code = e.response["Error"]["Code"]
         if error_code == "AccessDenied":
-            abort(403)  # منتقل به صفحه‌ی خطای 403
+            abort(403)
         else:
             flash(f"AWS Error: {error_code}", "danger")
             return redirect(url_for("auth.login"))
@@ -161,28 +148,23 @@ def buckets():
         flash(f"Unexpected error: {str(e)}", "danger")
         return redirect(url_for("auth.login"))
 
-
-
 @bucket_bp.route("/tables")
 @login_required
 def tables():
     return redirect(url_for("bucket.buckets"))
-
-
 
 @bucket_bp.route("/create_bucket", methods=["POST"])
 @login_required
 def create_bucket_route():
     data = request.get_json()
     bucket_name = data.get("bucket_name")
-    region = data.get("region", "us-east-1")
+    region = data.get("region", "default")
     enable_locking = data.get("enable_locking", False)
 
     endpoint = session.get("endpoint_url")
     access_key = session.get("access_key")
     secret_key = session.get("secret_key")
 
-    # صدا زدن تابع موجود در aws.py
     response = create_bucket(endpoint, access_key, secret_key, bucket_name, region, enable_locking)
     
     return jsonify(response)
@@ -290,7 +272,6 @@ def get_bucket_versioning():
 @login_required
 def add_bucket_tag():
     data = request.get_json(silent=True) or {}
-    # پشتیبانی از چند نام فیلد (fallback)
     bucket_name = data.get("bucket_name") or data.get("BucketName") or data.get("bucket")
     tag_key = data.get("tag_key") or data.get("key") or data.get("TagKey")
     tag_value = data.get("tag_value") or data.get("value") or data.get("TagValue")
@@ -301,18 +282,15 @@ def add_bucket_tag():
     s3 = get_s3_client()
 
     try:
-        # تلاش برای گرفتن تگ‌های موجود (تا جایگزین نشه، ولی به لیست اضافه کنیم)
         existing = []
         try:
             resp = s3.get_bucket_tagging(Bucket=bucket_name)
             existing = resp.get("TagSet", [])
         except ClientError as e:
             code = e.response.get("Error", {}).get("Code", "")
-            # اگر هیچ تگی وجود نداشته باشه بعضی سرویس‌ها NoSuchTagSet میدن
             if code not in ("NoSuchTagSet", "404", "NoSuchTagSetError", "NoSuchTagSetFault"):
                 raise
 
-        # حذف تگ قدیمی با همون Key در صورت وجود و اضافه کردن مقدار جدید
         new_tags = [t for t in existing if t.get("Key") != tag_key]
         new_tags.append({"Key": tag_key, "Value": tag_value})
 
@@ -340,21 +318,17 @@ def delete_bucket_tag():
 
     s3 = get_s3_client()
     try:
-        # گرفتن تگ‌های موجود
         resp = s3.get_bucket_tagging(Bucket=bucket_name)
         existing = resp.get("TagSet", [])
 
-        # فیلتر کردن تگ مورد نظر
         new_tags = [t for t in existing if t.get("Key") != tag_key]
 
         if len(new_tags) == len(existing):
             return jsonify({"success": False, "message": f"❌ Tag '{tag_key}' not found."}), 404
 
-        # ست کردن تگ‌های جدید (بدون اون تگ)
         if new_tags:
             s3.put_bucket_tagging(Bucket=bucket_name, Tagging={"TagSet": new_tags})
         else:
-            # اگر هیچ تگی باقی نموند → باید کل تگ‌ها حذف بشن
             s3.delete_bucket_tagging(Bucket=bucket_name)
 
         session.pop("buckets_info", None)
@@ -480,7 +454,6 @@ def set_bucket_lifecycle():
 
     s3 = get_s3_client()
     try:
-        # اطمینان از اینکه همیشه یه لیست از Ruleها داریم
         if isinstance(lifecycle, str):
             lifecycle = json.loads(lifecycle)
         if isinstance(lifecycle, dict):
@@ -593,14 +566,12 @@ def delete_bucket_replication():
     s3 = get_s3_client()
     try:
         s3.delete_bucket_replication(Bucket=bucket_name)
-        # refresh cache
         session.pop("buckets_info", None)
         return jsonify({"success": True, "message": f"✅ Replication rules deleted from {bucket_name}"})
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code", "Unknown")
         error_msg = e.response.get("Error", {}).get("Message", str(e))
         
-        # اگر replication configuration وجود نداشته باشد
         if error_code in ("ReplicationConfigurationNotFoundError", "NoSuchReplicationConfiguration"):
             return jsonify({"success": True, "message": "No replication configuration found"})
         
@@ -635,7 +606,6 @@ def configure_locking():
     s3 = get_s3_client()
 
     try:
-        # ساخت dictionary برای retention configuration
         lock_config = {
             "ObjectLockEnabled": "Enabled",
             "Rule": {
@@ -651,7 +621,6 @@ def configure_locking():
             ObjectLockConfiguration=lock_config
         )
 
-        # پاک کردن cache session
         session.pop("buckets_info", None)
 
         return jsonify({

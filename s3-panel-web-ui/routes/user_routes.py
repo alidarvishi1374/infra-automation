@@ -18,13 +18,9 @@ def profile():
 @user_bp.route("/iam_users")
 @login_required
 def iam_users():
-    # get caller info
     user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
-
-    # list basic IAM users
     iam_users_list = list_iam_users(session["access_key"], session["secret_key"], session["endpoint_url"])
 
-    # enrich each user with count of ACTIVE access keys
     enriched_users = []
     for u in iam_users_list:
         username = u.get("UserName")
@@ -34,33 +30,28 @@ def iam_users():
         try:
             keys_resp = list_access_keys(session["access_key"], session["secret_key"], session["endpoint_url"], username)
             if isinstance(keys_resp, dict) and keys_resp.get("success") is not None:
-                # helper returned {"success": True, "keys": [...] } style
                 if keys_resp.get("success"):
                     keys = keys_resp.get("keys", [])
                     active_count = sum(1 for k in keys if k.get("Status") == "Active")
                 else:
-                    # service-level error (e.g. user not found)
                     active_error = keys_resp.get("message") or "Error"
             else:
-                # in case your helper returns raw list (backward-compat)
                 keys = keys_resp or []
                 active_count = sum(1 for k in keys if k.get("Status") == "Active")
         except Exception as e:
             active_error = str(e)
 
-        # copy user dict and attach new fields (so original structure untouched)
         user_copy = u.copy()
         user_copy["ActiveKeysCount"] = active_count
         user_copy["ActiveKeysError"] = active_error
         
-        # اطلاعات گروه‌ها (اگر لازمه)
         try:
             iam = boto3.client(
                 "iam",
                 aws_access_key_id=session["access_key"],
                 aws_secret_access_key=session["secret_key"],
                 endpoint_url=session["endpoint_url"],
-                region_name="us-east-1"
+                region_name="default"
             )
             groups_response = iam.list_groups_for_user(UserName=username)
             user_copy["Groups"] = [g['GroupName'] for g in groups_response['Groups']]
@@ -79,18 +70,14 @@ def create_user():
     endpoint = session.get("endpoint_url")
     access_key = session.get("access_key")
     secret_key = session.get("secret_key")
-    region = "us-east-1"
+    region = "default"
 
-    # اول کاربر رو ایجاد می‌کنیم
     result = create_iam_user(endpoint, access_key, secret_key, user_name, region)
     
-    # اگر ایجاد کاربر موفق بود و گزینه panel access فعال بود
     if result.get("success") and enable_panel_access:
         try:
-            # حالا policy رو attach می‌کنیم
             policy_result = attach_getuser_policy(access_key, secret_key, endpoint, user_name, region)
             if not policy_result.get("ok"):
-                # اگر attach policy شکست خورد، پیام خطا رو به نتیجه اضافه می‌کنیم
                 result["message"] += f" But failed to attach panel access policy: {policy_result.get('error', 'Unknown error')}"
             else:
                 result["message"] += " with panel access enabled"
@@ -110,7 +97,6 @@ def attach_getuser_policy(root_access_key, root_secret_key, endpoint_url, target
             region_name=region_name
         )
 
-        # پالیسی ساده که فقط اجازه iam:GetUser روی یوزر مشخص رو میده
         policy_document = {
             "Version": "2012-10-17",
             "Statement": [
@@ -183,7 +169,7 @@ def get_keys():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1" 
+        region_name="default" 
     )
 
     keys = iam.list_access_keys(UserName=username).get("AccessKeyMetadata", [])
@@ -202,13 +188,12 @@ def modify_key():
     key_id = request.form.get("key_id")
     action = request.form.get("action")
 
-    import boto3
     iam = boto3.client(
         "iam",
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1" 
+        region_name="default" 
     )
 
     try:
@@ -269,7 +254,7 @@ def get_user_inline_policies():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1"
+        region_name="default"
     )
     try:
         resp = iam_client.list_user_policies(UserName=username)
@@ -295,7 +280,7 @@ def delete_user_inline_policy():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1"
+        region_name="default"
     )
     try:
         iam_client.delete_user_policy(UserName=username, PolicyName=policy_name)
@@ -316,7 +301,7 @@ def add_user_inline_policy():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1"
+        region_name="default"
     )
 
     try:
@@ -341,7 +326,7 @@ def update_user_inline_policy():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1"
+        region_name="default"
     )
     try:
         iam_client.put_user_policy(
@@ -362,7 +347,7 @@ def get_attached_user_policies():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1"
+        region_name="default"
     )
     try:
         attached_policies = iam_client.list_attached_user_policies(UserName=username).get("AttachedPolicies", [])
@@ -382,7 +367,7 @@ def attach_user_policy():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1"
+        region_name="default"
     )
     try:
         iam_client.attach_user_policy(UserName=username, PolicyArn=policy_arn)
@@ -402,7 +387,7 @@ def detach_user_policy():
         aws_access_key_id=session["access_key"],
         aws_secret_access_key=session["secret_key"],
         endpoint_url=session["endpoint_url"],
-        region_name="us-east-1"
+        region_name="default"
     )
     try:
         iam_client.detach_user_policy(UserName=username, PolicyArn=policy_arn)

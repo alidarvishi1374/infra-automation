@@ -14,9 +14,6 @@ DB_FILE = "roles.db"
 TEHRAN_TZ = ZoneInfo("Asia/Tehran")
 
 
-# -----------------------------
-# گرفتن ARN یوزر از session
-# -----------------------------
 def get_user_arn_from_session():
     access_key = session.get("access_key")
     secret_key = session.get("secret_key")
@@ -29,7 +26,7 @@ def get_user_arn_from_session():
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
         endpoint_url=endpoint,
-        region_name="us-east-1"
+        region_name="default"
     )
     try:
         response = iam_client.get_user()
@@ -39,9 +36,6 @@ def get_user_arn_from_session():
         return None
 
 
-# -----------------------------
-# بررسی اینکه ARN یوزر داخل principal هست
-# -----------------------------
 def user_in_principal(user_arn, principal_json):
     try:
         statements = json.loads(principal_json)
@@ -58,9 +52,6 @@ def user_in_principal(user_arn, principal_json):
         return False
 
 
-# -----------------------------
-# گرفتن رول‌هایی که user می‌تواند assume کند
-# -----------------------------
 def get_roles_for_user(user_arn):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
@@ -82,9 +73,6 @@ def get_roles_for_user(user_arn):
     return roles
 
 
-# -----------------------------
-# چک کردن expiration قبل از assume
-# -----------------------------
 def check_expiration_before_assume(role_arn, user_arn):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
@@ -116,9 +104,7 @@ def check_expiration_before_assume(role_arn, user_arn):
     return ("not_exists" if not user_history else "expired"), (perm == "yes")
 
 
-# -----------------------------
-# Assume Role با boto3
-# -----------------------------
+
 def assume_role(role_arn, session_name, duration_seconds):
     access_key = session.get("access_key")
     secret_key = session.get("secret_key")
@@ -128,7 +114,7 @@ def assume_role(role_arn, session_name, duration_seconds):
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
         endpoint_url=endpoint,
-        region_name='us-east-1'
+        region_name='default'
     )
     response = client.assume_role(
         RoleArn=role_arn,
@@ -144,9 +130,6 @@ def assume_role(role_arn, session_name, duration_seconds):
     }
 
 
-# -----------------------------
-# ثبت یوزر و تاریخ assume در دیتابیس
-# -----------------------------
 def register_assume(role_arn, user_arn, duration_seconds):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
@@ -181,9 +164,6 @@ def register_assume(role_arn, user_arn, duration_seconds):
     conn.close()
 
 
-# ======================
-# صفحه اصلی Assume Roles بدون ورود کلید
-# ======================
 @assume_bp.route("/assume_roles", methods=["GET", "POST"])
 @login_required
 def assume_roles_page():

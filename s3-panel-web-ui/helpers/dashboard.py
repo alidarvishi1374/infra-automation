@@ -4,21 +4,14 @@ import os
 from botocore.client import Config
 from flask import session
 
-# ======================
-# S3 Client Functions
-# ======================
 def get_s3_client(access_key=None, secret_key=None, endpoint_url=None):
-    """
-    ایجاد S3 client - اگر credentials داده نشده از session استفاده میکنه
-    """
+
     if access_key is None:
-        # اگر خارج از context request هستیم
         try:
             access_key = session.get("access_key")
             secret_key = session.get("secret_key")
             endpoint_url = session.get("endpoint_url")
         except RuntimeError:
-            # خارج از context - از متغیرهای محیطی استفاده کن
             access_key = os.getenv('AWS_ACCESS_KEY_ID')
             secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
             endpoint_url = os.getenv('AWS_ENDPOINT_URL')
@@ -35,13 +28,7 @@ def get_s3_client(access_key=None, secret_key=None, endpoint_url=None):
         region_name="us-east-1"
     )
 
-# ======================
-# Bucket Operations
-# ======================
 def get_bucket_size_and_count(bucket_name, access_key=None, secret_key=None, endpoint_url=None):
-    """
-    محاسبه حجم و تعداد objectهای یک bucket
-    """
     s3 = get_s3_client(access_key, secret_key, endpoint_url)
     total_size = 0
     total_objects = 0
@@ -71,10 +58,6 @@ def get_bucket_size_and_count(bucket_name, access_key=None, secret_key=None, end
     return total_size, total_objects
 
 def get_bucket_data(search_filter=""):
-    """
-    گرفتن اطلاعات تمام buckets شامل حجم و تعداد objectها
-    برای نمودارها - اگر فیلتر نباشد فقط 5 تا بزرگترین رو برمی‌گرداند
-    """
     try:
         s3 = get_s3_client()
         all_buckets = s3.list_buckets().get("Buckets", [])
@@ -83,7 +66,6 @@ def get_bucket_data(search_filter=""):
         for bucket in all_buckets:
             name = bucket["Name"]
             
-            # اگر فیلتر جستجو داریم و bucket مطابقت ندارد، ردش کن
             if search_filter and search_filter.lower() not in name.lower():
                 continue
                 
@@ -97,7 +79,6 @@ def get_bucket_data(search_filter=""):
                 "Object_Count": object_count
             })
         
-        # اگر فیلتر جستجو نداریم، فقط 5 تا بزرگترین رو برگردون (برای نمودارها)
         if not search_filter:
             bucket_data.sort(key=lambda x: x["Size_Bytes"], reverse=True)
             bucket_data = bucket_data[:5]
@@ -109,10 +90,6 @@ def get_bucket_data(search_filter=""):
         return []
 
 def get_all_buckets_stats():
-    """
-    گرفتن آمار کامل همه buckets (بدون محدودیت)
-    برای نمایش تعداد کل و حجم کل
-    """
     try:
         s3 = get_s3_client()
         all_buckets = s3.list_buckets().get("Buckets", [])
@@ -137,12 +114,7 @@ def get_all_buckets_stats():
         return []
     
 def get_object_count_data(search_filter=""):
-    """
-    گرفتن داده‌های تعداد object برای نمودار
-    """
     bucket_data = get_bucket_data(search_filter)
-    
-    # فقط داده‌های مورد نیاز برای نمودار object count
     object_count_data = []
     for bucket in bucket_data:
         object_count_data.append({

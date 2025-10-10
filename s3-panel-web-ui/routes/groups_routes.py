@@ -10,7 +10,6 @@ iam_groups_bp = Blueprint("iam_groups", __name__)
 def iam_groups():
     user_info = get_user_type(session["access_key"], session["secret_key"], session["endpoint_url"])
 
-    # IAM client با توکن session
     iam_client = get_iam_client(
         session["access_key"],
         session["secret_key"],
@@ -18,13 +17,11 @@ def iam_groups():
     )
 
     try:
-        # لیست همه گروه‌ها
         groups_resp = iam_client.list_groups()
         groups_list = groups_resp.get("Groups", [])
     except Exception as e:
         return render_template("iam_groups.html", user_info=user_info, iam_groups=[], error=str(e))
 
-    # لیست همه کاربران برای چک کردن عضویت
     try:
         users_resp = iam_client.list_users()
         all_users = users_resp.get("Users", [])
@@ -38,7 +35,6 @@ def iam_groups():
         members = []
         error = None
 
-        # چک کردن عضویت هر کاربر
         for user in all_users:
             username = user["UserName"]
             try:
@@ -132,7 +128,6 @@ def remove_user_from_group():
     except Exception as e:
         return jsonify(success=False, message=str(e))
     
-# گرفتن لیست inline policies
 @iam_groups_bp.route("/get_inline_policies", methods=["GET"])
 @login_required
 def get_inline_policies():
@@ -155,7 +150,6 @@ def get_inline_policies():
     except Exception as e:
         return jsonify(success=False, message=str(e))
 
-# حذف inline policy
 @iam_groups_bp.route("/delete_inline_policy", methods=["POST"])
 @login_required
 def delete_inline_policy():
@@ -173,14 +167,13 @@ def delete_inline_policy():
     except Exception as e:
         return jsonify(success=False, message=str(e))
 
-# اضافه کردن inline policy جدید
 @iam_groups_bp.route("/add_inline_policy", methods=["POST"])
 @login_required
 def add_inline_policy():
     data = request.get_json()
     group_name = data.get("group_name")
     policy_name = data.get("policy_name")
-    policy_document = data.get("policy_document")  # dict
+    policy_document = data.get("policy_document")
 
     iam_client = get_iam_client(
         access_key=session["access_key"],
@@ -199,14 +192,13 @@ def add_inline_policy():
         return jsonify(success=False, message=str(e))
 
 
-# ویرایش inline policy
 @iam_groups_bp.route("/update_inline_policy", methods=["POST"])
 @login_required
 def update_inline_policy():
     data = request.get_json()
     group_name = data.get("group_name")
     policy_name = data.get("policy_name")
-    policy_document = data.get("policy_document")  # dict
+    policy_document = data.get("policy_document")
     iam_client = get_iam_client(
         access_key=session["access_key"],
         secret_key=session["secret_key"],
