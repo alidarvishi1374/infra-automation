@@ -16,6 +16,8 @@ COPY s3-panel-web-ui/ .
 RUN pip install --no-cache-dir -r requirements.txt && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir database
+
 # Expose Flask port
 EXPOSE 5000
 
