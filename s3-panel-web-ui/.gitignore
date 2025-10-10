@@ -1,5 +1,30 @@
-# virtual environment
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
 
-venv
+# Virtual environment
+venv/
+.env/
 
-roles.db
+# SQLite / Local databases
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cached or temporary
+*.egg-info/
+dist/
+build/
