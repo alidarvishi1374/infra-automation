@@ -1,29 +1,29 @@
-# Ignore Python virtual environment
+# Python virtual environment
 venv/
 
-# Ignore compiled Python files
+# Compiled Python files
 __pycache__/
 *.pyc
 *.pyo
 
-# Ignore local database files
+# Local DBs
 *.db
 
-# Ignore Git and GitHub related files
+# Git and GitHub
 .git/
 .github/
 .gitignore
 
-# Ignore Dockerfile itself (optional)
+# Docker build files
 Dockerfile
 .dockerignore
 
-# Ignore system and editor-specific files
+# Environment and editor configs
+.env
 *.swp
 *.swo
 *.bak
 *.tmp
 *.log
-.env
 .vscode/
 .idea/
