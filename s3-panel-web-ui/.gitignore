@@ -12,6 +12,7 @@ venv/
 # SQLite / Local databases
 *.db
 *.sqlite3
+database/
 
 # Logs
 *.log

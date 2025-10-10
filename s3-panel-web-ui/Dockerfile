@@ -19,6 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 # Copy the rest of the app (excluding patterns from .dockerignore)
 COPY . .
 
+RUN mkdir -p /app/database
+
 # Expose Flask port
 EXPOSE 5000
 
