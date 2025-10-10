@@ -10,14 +10,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Copy only requirements first to leverage Docker caching
-COPY requirements.txt .
+COPY s3-panel-web-ui/ .
 
 # Install dependencies (no cache to keep image small)
 RUN pip install --no-cache-dir -r requirements.txt && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Copy the rest of the app (excluding patterns from .dockerignore)
-COPY s3-panel-web-ui .
 
 # Expose Flask port
 EXPOSE 5000
