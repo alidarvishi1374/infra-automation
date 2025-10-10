@@ -35,5 +35,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/s3-panel:${{ steps.vars.outputs.sha }}
-            ghcr.io/${{ github.repository_owner }}/s3-panel:latest
+            ghcr.io/${{ github.repository_owner }}/test:${{ steps.vars.outputs.sha }}
+            ghcr.io/${{ github.repository_owner }}/test:latest
