@@ -12,11 +12,15 @@ jobs:
 
     permissions:
       contents: read
-      packages: write 
+      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Get short commit SHA
+        id: vars
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -30,4 +34,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/s3-panel:latest
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/s3-panel:${{ steps.vars.outputs.sha }}
+            ghcr.io/${{ github.repository_owner }}/s3-panel:latest
