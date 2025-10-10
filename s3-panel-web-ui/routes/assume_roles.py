@@ -10,7 +10,7 @@ from helpers.aws import get_user_type
 
 
 assume_bp = Blueprint("assume_roles", __name__)
-DB_FILE = "roles.db"
+DB_FILE = "database/roles.db"
 TEHRAN_TZ = ZoneInfo("Asia/Tehran")
 
 

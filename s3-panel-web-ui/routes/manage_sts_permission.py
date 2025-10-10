@@ -8,7 +8,7 @@ from helpers.aws import get_user_type
 
 
 manage_bp = Blueprint("manage", __name__)
-DB_FILE = "roles.db"
+DB_FILE = "database/roles.db"
 
 # --- Database init ---
 def init_db():
