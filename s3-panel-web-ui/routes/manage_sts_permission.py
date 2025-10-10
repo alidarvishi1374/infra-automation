@@ -175,14 +175,30 @@ def get_roles_and_users():
     return roles
 
 
-# --- Routes ---
 @manage_bp.before_app_request
 def sync_roles_before_request():
     if session.get("logged_in"):
-        try:
-            list_roles_and_users()
-        except Exception as e:
-            current_app.logger.error(f"Failed to sync roles: {e}")
+        user_info = get_user_type(
+            session["access_key"],
+            session["secret_key"],
+            session["endpoint_url"]
+        )
+        user_arn = user_info.get("Arn", "")
+        
+        if not user_arn:
+            current_app.logger.warning("No user ARN found in session, skipping role sync.")
+            return
+
+        if user_arn.lower().endswith(":root"):
+            try:
+                list_roles_and_users()
+            except Exception as e:
+                current_app.logger.error(f"Failed to sync roles: {e}")
+
+
+
+
+
 
 
 @manage_bp.route("/manage_sts_permissions")

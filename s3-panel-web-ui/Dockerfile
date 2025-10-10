@@ -10,16 +10,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Copy only requirements first to leverage Docker caching
-COPY requirements.txt .
+COPY . .
 
 # Install dependencies (no cache to keep image small)
 RUN pip install --no-cache-dir -r requirements.txt && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy the rest of the app (excluding patterns from .dockerignore)
-COPY . .
-
-RUN mkdir -p /app/database
+RUN mkdir database
 
 # Expose Flask port
 EXPOSE 5000
