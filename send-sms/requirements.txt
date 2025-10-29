@@ -1,4 +1,0 @@
-Flask
-gevent
-kavenegar
-PyYAML
