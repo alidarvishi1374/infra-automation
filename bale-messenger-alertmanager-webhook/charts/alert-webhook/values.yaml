@@ -1,0 +1,25 @@
+namespace: default
+
+replicaCount: 1
+
+image:
+  repository: your-dockerhub-user/alert-webhook
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env:
+  BALE_TOKEN: "YOUR_BALE_TOKEN"
+  BALE_CHAT_ID: "YOUR_CHAT_ID"

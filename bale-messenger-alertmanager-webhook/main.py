@@ -165,6 +165,10 @@ def webhook():
         logger.error(f"Webhook error: {e}")
         return "Error", 500
 
+@app.route("/healthz", methods=["GET"])
+def health():
+    return "OK", 200
+
 
 if __name__ == "__main__":
     hostname = socket.gethostname()

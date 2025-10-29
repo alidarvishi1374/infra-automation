@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-webhook
+  namespace: {{ .Values.namespace | quote }}
+  labels:
+    app: alert-webhook
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: alert-webhook
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
