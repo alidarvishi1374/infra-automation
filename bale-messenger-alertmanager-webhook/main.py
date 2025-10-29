@@ -8,13 +8,17 @@ import socket
 import requests
 from datetime import datetime, timezone, timedelta
 import logging
-
+import os
 # ===============================
 # 🔹 Bale Configuration
 # ===============================
-TOKEN = "<bot_token>"
-CHANNEL = "<channel_id>"
+
+TOKEN = os.getenv("BALE_TOKEN", "")
+CHANNEL = os.getenv("BALE_CHAT_ID", "")
 BALE_URL = f"https://tapi.bale.ai/bot{TOKEN}/sendMessage"
+
+if not TOKEN or not CHANNEL:
+    logger.error("Missing Bale configuration (BALE_TOKEN or BALE_CHAT_ID)")
 
 # ===============================
 # 🔹 Logging Setup
@@ -168,3 +172,4 @@ if __name__ == "__main__":
     PORT = 5000
     logger.info(f"Webhook running on http://{IP}:{PORT}/alerting")
     WSGIServer(("0.0.0.0", PORT), app).serve_forever()
+
