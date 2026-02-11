@@ -1,0 +1,270 @@
+workflow:
+  rules:
+    - changes:
+        - README.md
+        - sbom/**/* 
+      when: never
+
+    - when: always
+
+stages:
+  - test
+  - sonar_scan
+  - security
+  - fs-scan
+  - build
+  - image-scan
+  - sbom
+  - push
+
+variables:
+  IMAGE_TAG_BASE: ${REGISTRY_URL}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}
+  IMAGE_NAME: ${IMAGE_TAG_BASE}:${CI_COMMIT_SHORT_SHA}
+  LATEST_TAG: ${IMAGE_TAG_BASE}:latest
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  DOCKER_CONFIG: /tmp/.docker
+  GIT_DEPTH: "0"
+  PIP_INDEX_URL: "http://192.168.135.132:8081/repository/pypi-local/simple"
+  PIP_TRUSTED_HOST: "192.168.135.132"
+
+flake8-check:
+  stage: test
+  image: 192.168.135.132:8081/docker-local/python:3.11-slim
+  before_script:
+    - pip install --no-cache-dir -r requirements.txt
+    - pip install flake8 flake8-html
+  script:
+    - |
+      set +e  
+      echo "Running flake8 test for $CI_PROJECT_DIR"
+      flake8 src/ --format=html --htmldir=flake8-report
+      FLAKE_EXIT_CODE=$?
+      echo "$FLAKE_EXIT_CODE" > flake-exit-code.txt
+      set -e
+  artifacts:
+    when: always
+    expire_in: 1 hour
+    paths:
+      - flake8-report/
+      - flake-exit-code.txt
+  tags:
+    - security
+  allow_failure: true
+
+upload-flake8-html-to-s3:
+  stage: test
+  image:
+    name: 192.168.135.132:8081/docker-local/amazon/aws-cli:2.33.18
+    entrypoint: [""]
+  needs:
+    - job: flake8-check
+      artifacts: true
+  script:
+    - |
+      FLAKE_EXIT_CODE=$(cat flake-exit-code.txt)
+      echo "Flake8 exit code from previous job: $FLAKE_EXIT_CODE"
+      echo "Uploading flake8 HTML report to S3"
+      export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+      export AWS_DEFAULT_REGION=default
+      export S3_ENDPOINT=$S3_ENDPOINT
+      export REPORT_PATH="flake8-report/${CI_COMMIT_REF_NAME}/${CI_COMMIT_SHORT_SHA}"
+      aws s3 cp flake8-report/ s3://$BUCKET/$REPORT_PATH/ --recursive --endpoint-url $S3_ENDPOINT --no-verify-ssl
+      echo "Public URL\:\ $S3_ENDPOINT/$BUCKET/$REPORT_PATH/index.html"
+
+      if [ "$FLAKE_EXIT_CODE" != "0" ]; then
+        echo "❌ Bandit findings detected → failing this job"
+        exit 1
+      else
+        echo "✅ Flake8 clean"
+      fi
+  tags:
+    - security
+
+sonar_scan:
+  stage: sonar_scan
+  image:
+    name: 192.168.135.132:8081/docker-local/sonarsource/sonar-scanner-cli:11
+    entrypoint: [""]
+  cache:
+    key: "sonar-cache-$CI_COMMIT_REF_SLUG"
+    paths:
+      - "${SONAR_USER_HOME}/cache"
+      - sonar-scanner/
+  script:
+    - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}" -Dsonar.login="${SONAR_TOKEN}"
+  tags:
+    - security
+
+bandit_scan:
+  stage: security
+  image: 192.168.135.132:8081/docker-local/python:3.11-slim
+  before_script:
+    - pip install --upgrade pip
+    - pip install bandit
+  script: 
+    - |
+      set +e  
+      bandit -r . -f json -o bandit-report.json
+      BANDIT_EXIT_CODE=$?
+      echo "Bandit exit code: $BANDIT_EXIT_CODE"
+      echo "$BANDIT_EXIT_CODE" > bandit-exit-code.txt
+      set -e 
+  artifacts:
+    when: always
+    expire_in: 1 hour
+    paths:
+      - bandit-report.json
+      - bandit-exit-code.txt
+  tags:
+    - security
+
+bandit_to_defectdojo:
+  stage: security
+  image: 192.168.135.132:8081/docker-local/curlimages/curl:8.5.0
+  needs:
+    - job: bandit_scan
+      artifacts: true
+  script:
+    - |
+      BANDIT_EXIT_CODE=$(cat bandit-exit-code.txt)
+      echo "Bandit exit code from previous job: $BANDIT_EXIT_CODE"
+
+      curl -k -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+        -H "Authorization: Token $DEFECTDOJO_API_KEY" \
+        -F "scan_type=Bandit Scan" \
+        -F "file=@bandit-report.json" \
+        -F "engagement=$DEFECTDOJO_ENGAGEMENT_ID" \
+        -F "active=true" \
+        -F "verified=true" \
+        -F "close_old_findings=true" \
+        -F "minimum_severity=Low"
+
+      if [ "$BANDIT_EXIT_CODE" != "0" ]; then
+        echo "❌ Bandit findings detected → failing this job"
+        exit 1
+      else
+        echo "✅ Bandit clean"
+      fi
+  tags:
+    - security
+
+trivy-fs:
+  stage: fs-scan
+  image:
+    name: 192.168.135.132:8081/docker-local/trivy-offline:0.66.0-1  # Preloaded Trivy image with vulnerability DB cached in /root/.cache/trivy for offline scans
+    entrypoint: [""]
+  cache:
+    key: trivy-cache
+    paths:
+      - /root/.cache/trivy/
+  variables:
+    TRIVY_CACHE_DIR: /root/.cache/trivy
+    TRIVY_DEBUG: true
+    TRIVY_SKIP_DB_UPDATE: true
+    TRIVY_SKIP_JAVA_DB_UPDATE: true
+    TRIVY_OFFLINE_SCAN: true
+    TRIVY_SEVERITY: CRITICAL,HIGH
+    TRIVY_TIMEOUT: 5m
+    TRIVY_IGNORE_UNFIXED: true
+    TRIVY_SKIP_VERSION_CHECK: true
+    TRIVY_CHECKS_BUNDLE_REPOSITORY: 192.168.135.132:8081/docker-local/aquasecurity/trivy-checks:1
+  script:
+    - echo "Running Trivy Scan on $CI_PROJECT_DIR"
+    - trivy fs src --scanners vuln,secret,misconfig --exit-code 1 --severity $TRIVY_SEVERITY --format json --output trivy-fs.json
+    - trivy fs src --scanners vuln,secret,misconfig --exit-code 0 --severity MEDIUM,LOW --format json
+  artifacts:
+    when: always
+    paths: [trivy-fs.json]
+  tags:
+    - security
+
+build:
+  stage: build
+  image: 192.168.135.132:8081/docker-local/docker:29.2.1-cli
+  before_script:
+    - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USERNAME" --password-stdin $REGISTRY_URL
+  script:
+    - docker build -t ${LATEST_TAG} -t ${IMAGE_TAG_BASE}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA} .
+  tags:
+    - security
+
+trivy-image:
+  stage: image-scan
+  image:
+    name: 192.168.135.132:8081/docker-local/trivy-offline:0.66.0-1  # Preloaded Trivy image with vulnerability DB cached in /root/.cache/trivy for offline scans
+    entrypoint: [""]
+  needs:
+    - job: build
+  cache:
+    key: trivy-cache
+    paths:
+      - /root/.cache/trivy/
+  variables:
+    TRIVY_CACHE_DIR: /root/.cache/trivy
+    TRIVY_DEBUG: true
+    TRIVY_SKIP_DB_UPDATE: true
+    TRIVY_SKIP_JAVA_DB_UPDATE: true
+    TRIVY_OFFLINE_SCAN: true
+    TRIVY_SEVERITY: CRITICAL,HIGH
+    TRIVY_TIMEOUT: 5m
+    TRIVY_IGNORE_UNFIXED: true
+    TRIVY_SKIP_VERSION_CHECK: true
+    TRIVY_CHECKS_BUNDLE_REPOSITORY: 192.168.135.132:8081/docker-local/aquasecurity/trivy-checks:1
+    IMAGE_REF: ${IMAGE_TAG_BASE}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  before_script:
+    - echo "$REGISTRY_PASSWORD" | trivy registry login $REGISTRY_URL --username "$REGISTRY_USERNAME" --password-stdin
+  script:
+    - echo "Running Trivy Scan on $IMAGE_REF"
+    - trivy image  $IMAGE_REF --severity $TRIVY_SEVERITY --format json --output trivy-image.json
+    - trivy image --format cyclonedx -o sbom.cdx.json $IMAGE_REF
+  artifacts:
+    when: always
+    paths: 
+      - trivy-image.json
+      - sbom.cdx.json
+    reports:
+      cyclonedx: sbom.cdx.json
+  tags:
+    - security
+
+commit-sbom:
+  stage: sbom
+  image: 192.168.135.132:8081/docker-local/alpine:3.18
+  needs: [trivy-image]
+  before_script:
+    - apk add --no-cache git jq
+    - git config --global user.email "gitlab-runner@local.net"
+    - git config --global user.name "Gitlab Runner"
+    - git config --global credential.helper store
+    - echo "http://$GITLAB_USER:$GITLAB_TOKEN@192.168.135.132:81" > ~/.git-credentials
+    - git remote set-url origin http://$GITLAB_USER:$GITLAB_TOKEN@192.168.135.132:81/security/bale-messenger-alertmanager-webhook-local.git
+    - git fetch origin
+    - git checkout main
+    - git pull origin main --rebase
+  script:
+    - mkdir -p sbom
+    - cp sbom.cdx.json sbom/sbom-${CI_COMMIT_SHA}.json
+    - echo "# SBOM Report" > sbom/sbom-${CI_COMMIT_SHA}.md
+    - echo "Generate for commit ${CI_COMMIT_SHA} on $(date)" >> sbom/sbom-${CI_COMMIT_SHA}.md
+    - jq -r '.components[] | "- **\(.name)** \(.version) (\(.type))"' sbom.cdx.json >> sbom/sbom-${CI_COMMIT_SHA}.md
+    - git add sbom/
+    - git commit -m "Add SBOM for commit ${CI_COMMIT_SHA} [skip ci]" || echo "No Changes to commit"
+    - git push origin "$CI_COMMIT_BRANCH"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  tags:
+    - security
+
+push_image:
+  stage: push
+  image: 192.168.135.132:8081/docker-local/docker:29.2.1-cli
+  before_script:
+    - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USERNAME" --password-stdin $REGISTRY_URL
+  script:
+    - docker push ${LATEST_TAG}
+    - docker push ${IMAGE_TAG_BASE}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+    - docker rmi ${LATEST_TAG}
+    - docker rmi ${IMAGE_TAG_BASE}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  tags:
+    - security
