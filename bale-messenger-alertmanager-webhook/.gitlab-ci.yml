@@ -16,6 +16,7 @@ stages:
   - image-scan
   - sbom
   - push
+  - predicate
 
 variables:
   IMAGE_TAG_BASE: ${REGISTRY_URL}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}
@@ -189,6 +190,8 @@ build:
   tags:
     - security
 
+
+
 trivy-image:
   stage: image-scan
   image:
@@ -264,7 +267,50 @@ push_image:
   script:
     - docker push ${LATEST_TAG}
     - docker push ${IMAGE_TAG_BASE}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+    - digest=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE_TAG)
+    - echo $digest > digest.txt
     - docker rmi ${LATEST_TAG}
     - docker rmi ${IMAGE_TAG_BASE}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  artifacts:
+    paths:
+      - digest.txt
+    expire_in: 1 hour
   tags:
     - security
+
+generate_predicate:
+  stage: predicate
+  dependencies:
+    - build_image
+  script:
+    - apt update -y && apt install jq -y
+    - |
+      jq --arg SHA "$CI_COMMIT_SHA" --arg USER_EMAIL "$GITLAB_USER_EMAIL" --arg USERNAME $GITLAB_USER_NAME '
+        .predicate.buildDefinition.externalParameters += {
+          "CI_COMMIT_SHA": $SHA,
+          "USER_EMAIL": $USER_EMAIL,
+          "USER_NAME": $USERNAME
+        }
+        | .predicate.buildDefinition.externalParameters |= with_entries(select(.value != ""))
+      ' artifacts-metadata.json > predicate.json
+  artifacts:
+    paths:
+      - digest.txt
+      - predicate.json
+    expire_in: 1 hour
+
+sign_image:
+  stage: security
+  dependencies:
+    - generate_predicate
+  needs: ["generate_predicate"]
+  image:
+    name: registry.docker.ir/bitnami/cosign:latest 
+    pull_policy: "if-not-present"
+    entrypoint: [""]
+  script:
+    - digest=$(cat digest.txt)
+    - cp /builds/devsecops/bale-messenger-alertmanager-webhook.tmp/COSIGN_KEY .
+    - cosign login $REGISTRY_URL --username $REGISTRY_USERNAME --password $REGISTRY_PASSWORD
+    - echo y | COSIGN_PASSWORD=$COSIGN_KEY_PASS cosign sign --key=COSIGN_KEY --insecure-skip-verify --rekor-url http://192.168.0.141:3000 $digest
+    - echo y | COSIGN_PASSWORD=$COSIGN_KEY_PASS cosign attest --key=COSIGN_KEY --predicate predicate.json --insecure-skip-verify --rekor-url http://192.168.0.141:3000 $digest
