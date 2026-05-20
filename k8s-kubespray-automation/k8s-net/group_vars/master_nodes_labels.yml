@@ -1,0 +1,3 @@
+node_labels:
+  role: master
+  provider: kubespray

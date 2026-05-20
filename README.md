@@ -1,6 +1,7 @@
 # ⚙️ Infra Automation Suite
 
-A collection of infrastructure automation tools designed for DevOps workflows 
+A collection of infrastructure automation tools and DevOps utilities for Kubernetes, Linux, and monitoring workflows.
+
 ---
 
 ## 📁 Projects
@@ -8,21 +9,23 @@ A collection of infrastructure automation tools designed for DevOps workflows
 | Directory | Description |
 |------------|--------------|
 | `bale-messenger-alertmanager-webhook/` | Flask-based webhook for forwarding Alertmanager alerts to Bale Messenger. |
-| `ubuntu-ssh-management/` | Automation scripts for managing SSH access and users on Ubuntu servers. |
+| `ubuntu-ssh-management/` | Automation scripts for managing SSH access and user management on Ubuntu servers. |
+| `k8s-kubespray-automation/` | Kubernetes cluster deployment automation using Kubespray with custom Ansible roles and Cilium networking integration. |
 
 ---
 
+## 🚀 Technologies
 
-## 🧠 Roadmap
-
-- [ ] Add Helm charts  
-- [ ] Integrate Vault for secret management  
-- [ ] Add GitHub Actions for CI/CD  
-- [ ] Include automated tests  
+- Kubernetes
+- Kubespray
+- Ansible
+- Linux Automation
+- Cilium
+- GitLab CI/CD
+- Flask
 
 ---
 
 ## 👤 Maintainer
 
-**Ali Darvishi** — DevOps Engineer  
-
+**Ali Darvishi** — DevOps Engineer

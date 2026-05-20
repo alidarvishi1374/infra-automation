@@ -1,0 +1,154 @@
+stages:
+  - check
+  - install
+  - reset
+  - upgrade
+  - label
+  - taint
+
+
+.default_template: &default_ansible_job
+  image:
+    name: 192.168.0.130:8081/docker-local/kubespray/kubespray:v2.31.0
+    pull_policy: if-not-present
+  variables:
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+  tags:
+    - kubespray
+  before_script:
+    - mkdir -p /home/root/.ssh
+    - cp /builds/kubespray/k8s-automation.tmp/id_rsa /home/root/.ssh/id_rsa
+    - chmod 600 /home/root/.ssh/id_rsa
+
+ping_of_hosts:
+  stage: check
+  <<: *default_ansible_job
+  script:
+    - ansible all -i k8s-net/inventory.ini --private-key /home/root/.ssh/id_rsa -m ping
+
+install_k8s:
+  stage: install
+  needs:
+    - ping_of_hosts
+  when: manual
+  <<: *default_ansible_job
+  variables:
+    # This variable will be prompted for when the job is run manually.
+    INSTALL_CODE_INPUT: "" # Default value is empty.
+  script:
+    # Step 1: Compare the received code with the secret code.
+    - |
+      if [ "$INSTALL_CODE_INPUT" = "$SECRET_INSTALL_CODE" ]; then
+        echo "Confirmation code is correct. Proceeding with install..."
+        # Copy files and change directory
+        cp -r k8s-net /inventory
+        cp roles/etcd/tasks/gen_nodes_certs_script.yml /kubespray/roles/etcd/tasks/gen_nodes_certs_script.yml
+        cp roles/etcd/tasks/upd_ca_trust.yml /kubespray/roles/etcd/tasks/upd_ca_trust.yml
+        cp roles/network_plugin/cilium/tasks/apply.yml /kubespray/roles/network_plugin/cilium/tasks/apply.yml
+        cp roles/etcd/tasks/main.yml /kubespray/roles/etcd/tasks/main.yml 
+        cp roles/network_plugin/cilium/templates/values.yaml.j2 /kubespray/roles/network_plugin/cilium/templates/values.yaml.j2
+        cd /kubespray
+        # Execute the Ansible playbook
+        ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/cluster.yml
+      else
+        echo "Error: Incorrect confirmation code provided. Installation aborted."
+        exit 1 # Abort the job with an error.
+      fi
+
+reset_k8s:
+  stage: reset
+  when: manual # This job will only run when manually triggered.
+  <<: *default_ansible_job # Merges configurations from a default Ansible job template.
+  variables:
+    # This variable will be prompted for when the job is run manually.
+    RESET_CODE_INPUT: "" # Default value is empty.
+  script:
+    # Step 1: Compare the received code with the secret code.
+    - |
+      if [ "$RESET_CODE_INPUT" = "$SECRET_RESET_CODE" ]; then
+        echo "Confirmation code is correct. Proceeding with reset..."
+        # Copy files and change directory
+        cp -r k8s-net /inventory
+        cd /kubespray
+        # Execute the Ansible playbook
+        ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/reset.yml --extra-vars "reset_confirmation=true"
+      else
+        echo "Error: Incorrect confirmation code provided. Reset aborted."
+        exit 1 # Abort the job with an error.
+      fi
+
+upgrade_k8s:
+  stage: upgrade
+  needs:
+    - ping_of_hosts
+  when: manual
+  <<: *default_ansible_job
+  variables:
+    UPGRADE_CODE_INPUT: ""
+  script:
+    - |
+      if [ "$UPGRADE_CODE_INPUT" = "$SECRET_UPGRADE_CODE" ]; then
+        echo "Confirmation code is correct. Proceeding with upgrade..."
+        # Copy files and change directory
+        cp -r k8s-net /inventory
+        cp roles/etcd/tasks/gen_nodes_certs_script.yml /kubespray/roles/etcd/tasks/gen_nodes_certs_script.yml
+        cp roles/etcd/tasks/upd_ca_trust.yml /kubespray/roles/etcd/tasks/upd_ca_trust.yml
+        cp roles/network_plugin/cilium/tasks/apply.yml /kubespray/roles/network_plugin/cilium/tasks/apply.yml
+        cp roles/etcd/tasks/main.yml /kubespray/roles/etcd/tasks/main.yml 
+        cp roles/network_plugin/cilium/templates/values.yaml.j2 /kubespray/roles/network_plugin/cilium/templates/values.yaml.j2
+        cd /kubespray
+        # Execute the Ansible playbook
+        ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/upgrade_cluster.yml
+      else
+        echo "Error: Incorrect confirmation code provided. upgrade aborted."
+        exit 1 # Abort the job with an error.
+      fi
+
+
+label_node:
+  stage: label
+  needs:
+    - ping_of_hosts
+  when: manual # This job will only run when manually triggered.
+  <<: *default_ansible_job # Merges configurations from a default Ansible job template.
+  variables:
+    # This variable will be prompted for when the job is run manually.
+    LABEL_CODE_INPUT: "" # Default value is empty.
+  script:
+    # Step 1: Compare the received code with the secret code.
+    - |
+      if [ "$LABEL_CODE_INPUT" = "$SECRET_LABEL_CODE" ]; then
+        echo "Confirmation code is correct. Proceeding with label..."
+        # Copy files and change directory
+        cp -r k8s-net /inventory
+        cd /kubespray
+        # Execute the Ansible playbook
+        ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/cluster.yml --tags=node-label
+      else
+        echo "Error: Incorrect confirmation code provided. label aborted."
+        exit 1 # Abort the job with an error.
+      fi
+
+taint_node:
+  stage: taint
+  needs:
+    - ping_of_hosts
+  when: manual # This job will only run when manually triggered.
+  <<: *default_ansible_job # Merges configurations from a default Ansible job template.
+  variables:
+    # This variable will be prompted for when the job is run manually.
+    TAINT_CODE_INPUT: "" # Default value is empty.
+  script:
+    # Step 1: Compare the received code with the secret code.
+    - |
+      if [ "$TAINT_CODE_INPUT" = "$SECRET_TAINT_CODE" ]; then
+        echo "Confirmation code is correct. Proceeding with taint..."
+        # Copy files and change directory
+        cp -r k8s-net /inventory
+        cd /kubespray
+        # Execute the Ansible playbook
+        ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/cluster.yml --tags=node-taint
+      else
+        echo "Error: Incorrect confirmation code provided. taint aborted."
+        exit 1 # Abort the job with an error.
+      fi
