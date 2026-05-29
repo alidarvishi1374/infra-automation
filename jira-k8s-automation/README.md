@@ -28,18 +28,19 @@ Jira Webhook
 ---
 
 ## 📁 Project Structure
-
-.
-├── argocd/                # ArgoCD manifests (GitOps integration)
-├── helm/                  # Helm chart for deployment
-├── templates/             # Kubernetes manifests (legacy / helpers)
-├── services/              # Core business logic (K8s + Jira integration)
-├── main.py                # Entry point (Flask app)
-├── config.py              # Environment-based configuration loader
+```text
+jira-k8s-automation/
+├── argocd/ # ArgoCD manifests (GitOps integration)
+├── helm/ # Helm chart for deployment
+├── templates/ # Kubernetes manifests (legacy / helpers)
+├── services/ # Core business logic (K8s + Jira integration)
+├── main.py # Entry point (Flask app)
+├── config.py # Environment-based configuration loader
 ├── Dockerfile
 ├── requirements.txt
-└── .gitlab-ci.yml         # CI/CD pipeline
+└── .gitlab-ci.yml # CI/CD pipeline
 
+```
 ---
 
 ## ⚙️ Configuration
@@ -108,4 +109,5 @@ helm install jira-k8s-automation ./helm
 ## 👤 Maintainer
 
 Ali Darvishi — DevOps Engineer
+
 
