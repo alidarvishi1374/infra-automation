@@ -39,6 +39,7 @@ Jira Webhook
 ├── Dockerfile
 ├── requirements.txt
 └── .gitlab-ci.yml         # CI/CD pipeline
+
 ---
 
 ## ⚙️ Configuration

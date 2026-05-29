@@ -56,11 +56,6 @@ securityContext:
     dropCapabilities:
       - ALL
 
-# volumes:
-#   tmp:
-#     enabled: true
-#     mountPath: /tmp
-
 jiraUrl: "http://192.168.0.130:8091"
 kubectlClientAddress: "192.168.112.113"
 kubeconfigPath: ".kube/config"
