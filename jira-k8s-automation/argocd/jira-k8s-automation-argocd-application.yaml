@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jira-k8s-automation
+  namespace: argocd
+spec:
+  project: jira-k8s-automation-project
+  sources:
+  - repoURL: "harbor.local/helm-charts"
+    chart: jira-k8s-webhook
+    targetRevision: "0.1.70"
+    helm:
+      valueFiles:
+        - $values/helm/jira-k8s-webhook/values.yaml
+
+  - repoURL: "http://192.168.0.130/automation/jira-k8s-automation.git"
+    targetRevision: main
+    path: "."
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jira-k8s-webhook
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

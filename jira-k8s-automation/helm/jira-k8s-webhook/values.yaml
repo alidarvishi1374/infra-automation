@@ -1,0 +1,84 @@
+replicaCount: 2
+
+namespace: "jira-k8s-webhook"
+
+image:
+  repository: harbor.local/automation/jira-k8s-automation
+  tag: main-c0691004
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5000
+
+ingress:
+  enabled: false
+  host: jira-webhook.local
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+securityContext:
+  pod:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+  container:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    dropCapabilities:
+      - ALL
+
+# volumes:
+#   tmp:
+#     enabled: true
+#     mountPath: /tmp
+
+jiraUrl: "http://192.168.0.130:8091"
+kubectlClientAddress: "192.168.112.113"
+kubeconfigPath: ".kube/config"
+logLevel: INFO
+jiraToken: ""
+webhookSecret: ""
+
+teamPrefixes:
+  application-platform: technical-app
+  bigdata: technical-bigdata
+  sre: technical-sre
+  sysops: technical-sysops
+  payment-operation: technical-payment-operation
+  digital-operation: technical-digital-operation
+  smilinno: technical-smilinno
+
+jiraFields:
+  site: customfield_10200
+  team: customfield_10201
+  project: customfield_10202
+  application: customfield_10300

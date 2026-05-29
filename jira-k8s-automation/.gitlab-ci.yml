@@ -1,0 +1,382 @@
+stages:
+  - build
+  - deploy
+  - package
+
+.argocd-sync-template:
+  image: harbor.local/argoproj/argocd:v2.14.21
+
+  variables:
+    ARGOCD_OPTS: "--grpc-web"
+
+  before_script:
+    - |
+        sync_app () {
+          APP=$1
+
+          echo "Waiting for any running operation on $APP..."
+
+          # Ensure no ArgoCD operation (sync/refresh/prune) is currently in progress
+          argocd app wait $APP \
+            --auth-token $ARGOCD_TOKEN \
+            --server $ARGOCD_SERVER \
+            --insecure \
+            --operation \
+            --timeout 300
+
+          echo "Triggering refresh for $APP..."
+
+          # Force ArgoCD to re-evaluate the application state from Git
+          # (does NOT trigger sync, only refreshes desired state cache)
+          argocd app get $APP \
+            --auth-token $ARGOCD_TOKEN \
+            --server $ARGOCD_SERVER \
+            --insecure \
+            --refresh
+
+          echo "Waiting for ArgoCD auto-sync to complete..."
+
+          # Wait until ArgoCD controller finishes syncing the application
+          # (relies on auto-sync being enabled in the Application spec)
+          argocd app wait $APP \
+            --auth-token $ARGOCD_TOKEN \
+            --server $ARGOCD_SERVER \
+            --insecure \
+            --sync \
+            --timeout 300
+
+          echo "Waiting for healthy state..."
+
+          # Ensure all Kubernetes resources are fully healthy and ready
+          argocd app wait $APP \
+            --auth-token $ARGOCD_TOKEN \
+            --server $ARGOCD_SERVER \
+            --insecure \
+            --health \
+            --timeout 300
+        }
+
+variables:
+  # -----------------------------
+  # IMAGE
+  # -----------------------------
+  CI_REGISTRY_IMAGE: $CI_REGISTRY/$CI_PROJECT_PATH
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+
+  BRANCH_NAME: $CI_COMMIT_REF_SLUG
+  SHORT_SHA: $CI_COMMIT_SHORT_SHA
+
+  IMAGE_TAG_SHA: $BRANCH_NAME-$SHORT_SHA
+  IMAGE_TAG_LATEST: latest
+
+  # -----------------------------
+  # VERSIONING
+  # -----------------------------
+  CHART_VERSION: "0.1.${CI_PIPELINE_IID}"
+  APP_VERSION: "${CI_COMMIT_SHORT_SHA}"
+
+  # -----------------------------
+  # DOCKER DIND
+  # -----------------------------
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+# =========================================================
+# BUILD & PUSH DOCKER IMAGE
+# =========================================================
+docker-build:
+  stage: build
+
+  image: $CI_REGISTRY/library/docker-custom:29-dind
+
+  services:
+    - name: $CI_REGISTRY/library/docker-custom:29-dind
+      alias: docker
+      command:
+        - dockerd
+        - --host=tcp://0.0.0.0:2375
+        - --tls=false
+
+  tags:
+    - jira
+
+  before_script:
+    # --------------------------------
+    # TRUST HARBOR CA
+    # --------------------------------
+    - cp /etc/docker/certs.d/harbor.local/ca.crt /usr/local/share/ca-certificates/harbor-ca.crt
+    - update-ca-certificates --fresh
+
+    # --------------------------------
+    # LOGIN TO HARBOR
+    # --------------------------------
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+
+  script:
+    # --------------------------------
+    # BUILD IMAGE
+    # --------------------------------
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG_SHA .
+
+    # --------------------------------
+    # PUSH SHA TAG
+    # --------------------------------
+    - docker push $IMAGE_NAME:$IMAGE_TAG_SHA
+
+    # --------------------------------
+    # TAG LATEST
+    # --------------------------------
+    - docker tag $IMAGE_NAME:$IMAGE_TAG_SHA $IMAGE_NAME:$IMAGE_TAG_LATEST
+
+    # --------------------------------
+    # PUSH LATEST
+    # --------------------------------
+    - docker push $IMAGE_NAME:$IMAGE_TAG_LATEST
+
+  rules:
+    - changes:
+        - main.py
+        - config.py
+        - requirements.txt
+        - Dockerfile
+        - .dockerignore
+        - wheels/**/* 
+        - templates/**/*
+        - services/**/*
+
+update-values-image:
+  stage: deploy
+
+  image:
+    name: harbor.local/automation/alpine/git:2.45.2
+    entrypoint: [""]
+
+  tags:
+    - jira
+    
+  needs:
+    - job: docker-build
+
+  variables:
+    GIT_STRATEGY: none
+
+  before_script:
+    - git config --global user.email "gitlab-ci@local"
+    - git config --global user.name "GitLab CI"
+
+  script:
+    # --------------------------------
+    # CLONE REPO
+    # --------------------------------
+    - git clone http://$GITLAB_CI_USERNAME:$GITLAB_CI_TOKEN@192.168.0.130/automation/jira-k8s-automation.git repo
+    - cd repo
+
+    # --------------------------------
+    # UPDATE IMAGE REPOSITORY
+    # --------------------------------
+    - 'sed -i "/image:/,/^[^ ]/ s|repository:.*|repository: $IMAGE_NAME|" helm/jira-k8s-webhook/values.yaml'
+
+    # --------------------------------
+    # UPDATE IMAGE TAG
+    # --------------------------------
+    - 'sed -i "/image:/,/^[^ ]/ s|tag:.*|tag: $IMAGE_TAG_SHA|" helm/jira-k8s-webhook/values.yaml'
+
+    # --------------------------------
+    # SHOW RESULT
+    # --------------------------------
+    - cat helm/jira-k8s-webhook/values.yaml
+
+    # --------------------------------
+    # CHECK CHANGES
+    # --------------------------------
+    - git diff --quiet && echo "No changes" && exit 0
+
+    # --------------------------------
+    # COMMIT + PUSH
+    # --------------------------------
+    - git add helm/jira-k8s-webhook/values.yaml
+    - git commit -m "Update image to $IMAGE_TAG_SHA"
+    - git push origin HEAD:main
+
+  rules:
+    - changes:
+        - main.py
+        - config.py
+        - requirements.txt
+        - Dockerfile
+        - .dockerignore
+        - wheels/**/* 
+        - templates/**/*
+        - services/**/*
+
+sync-argocd-jira-apps:
+  stage: deploy
+  needs:
+    - job: update-values-image
+  tags:
+    - jira
+  extends: .argocd-sync-template
+  script:
+    - sync_app "$ARGOCD_JIRAAUTO_APPLICATION"
+  rules:
+    - changes:
+        - main.py
+        - config.py
+        - requirements.txt
+        - Dockerfile
+        - .dockerignore
+        - wheels/**/* 
+        - templates/**/*
+        - services/**/*
+
+# =========================================================
+# PACKAGE & PUSH HELM CHART
+# =========================================================
+publish-helm:
+  stage: package
+  image: 
+    name: $CI_REGISTRY/helm-charts/alpine/helm-custom:4.2
+    entrypoint: [""]
+  tags:
+    - jira
+  before_script:
+    # --------------------------------
+    # TRUST HARBOR CA
+    # --------------------------------
+    - cp /etc/docker/certs.d/harbor.local/ca.crt /usr/local/share/ca-certificates/harbor-ca.crt
+    - update-ca-certificates --fresh
+
+    # --------------------------------
+    # HELM LOGIN TO OCI REGISTRY
+    # --------------------------------
+    - echo "$CI_REGISTRY_PASSWORD" | helm registry login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+
+  script:
+
+    # --------------------------------
+    # UPDATE CHART VERSION
+    # --------------------------------
+    - 'sed -i "s/^version:.*/version: $CHART_VERSION/" helm/jira-k8s-webhook/Chart.yaml'
+
+    # --------------------------------
+    # UPDATE APP VERSION
+    # --------------------------------
+    - 'sed -i "s/^appVersion:.*/appVersion: \"$APP_VERSION\"/" helm/jira-k8s-webhook/Chart.yaml'
+
+    # --------------------------------
+    # PACKAGE CHART
+    # --------------------------------
+    - helm package helm/jira-k8s-webhook
+
+    # --------------------------------
+    # PUSH CHART TO HARBOR OCI
+    # --------------------------------
+    - helm push jira-k8s-webhook-$CHART_VERSION.tgz oci://"$CI_REGISTRY"/helm-charts
+
+  rules:
+      # --------------------------------
+      # DO NOT RUN IF ONLY values.yaml CHANGED
+      # --------------------------------
+    - changes:
+        - helm/**/templates/**/*
+        - helm/**/Chart.yaml
+
+# =========================================================
+# UPDATE ARGOCD APPLICATION HELM VERSION
+# =========================================================
+update-argocd-application:
+  stage: package
+  needs:
+    - job: publish-helm
+  image:
+    name: harbor.local/automation/alpine/git:2.45.2
+    entrypoint: [""]
+
+  tags:
+    - jira
+
+  variables:
+    GIT_STRATEGY: none
+
+  before_script:
+
+    # --------------------------------
+    # CONFIGURE GIT USER
+    # --------------------------------
+    - git config --global user.email "gitlab-ci@local"
+    - git config --global user.name "GitLab CI"
+
+  script:
+
+    # --------------------------------
+    # CLONE ARGOCD APPLICATION REPOSITORY
+    # --------------------------------
+    - git clone http://$GITLAB_CI_USERNAME:$GITLAB_CI_TOKEN@"$ARGOCD_APPLICATION_REPO" argocd-apps
+
+    # --------------------------------
+    # ENTER REPOSITORY
+    # --------------------------------
+    - cd argocd-apps
+
+    # --------------------------------
+    # UPDATE HELM CHART VERSION
+    # --------------------------------
+    - |
+      sed -i \
+      "s/targetRevision: \".*\"/targetRevision: \"$CHART_VERSION\"/" \
+      "$ARGOCD_APPLICATION_FILE"
+
+    # --------------------------------
+    # SHOW CHANGES
+    # --------------------------------
+    - cat "$ARGOCD_APPLICATION_FILE"
+
+    # --------------------------------
+    # COMMIT ONLY IF CHANGES EXIST
+    # --------------------------------
+    - |
+      if git diff --quiet; then
+        echo "No changes detected."
+        exit 0
+      fi
+
+    # --------------------------------
+    # COMMIT CHANGES
+    # --------------------------------
+    - git add "$ARGOCD_APPLICATION_FILE"
+
+    - |
+      git commit -m \
+      "Update jira-k8s-webhook chart version to $CHART_VERSION"
+
+    # --------------------------------
+    # PUSH CHANGES
+    # --------------------------------
+    - git push origin HEAD:main
+
+  rules:
+      # --------------------------------
+      # DO NOT RUN IF ONLY values.yaml CHANGED
+      # --------------------------------
+    - changes:
+        - helm/**/templates/**/*
+        - helm/**/Chart.yaml
+
+sync-argocd-applications-apps:
+  stage: package
+  needs:
+    - job: update-argocd-application
+  tags:
+    - jira
+  extends: .argocd-sync-template
+  script:
+    - sync_app "$ARGOCD_APPLICATINS_APP"
+    - sync_app "$ARGOCD_JIRAAUTO_APPLICATION"
+
+  rules:
+      # --------------------------------
+      # DO NOT RUN IF ONLY values.yaml CHANGED
+      # --------------------------------
+    - changes:
+        - helm/**/templates/**/*
+        - helm/**/Chart.yaml

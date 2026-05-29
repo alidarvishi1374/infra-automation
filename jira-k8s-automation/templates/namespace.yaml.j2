@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ namespace }}
+  annotations:
+    kyverno.regenerate.resources.revision: "1"
+  labels:
+    kyverno.auto.generate.rolebinding: "true"
+    kyverno.auto.generate.resourcequota: "true"
+    kyverno.auto.generate.policy.replicacount: "true"
+    kyverno.auto.generate.quotascaler: "true"
+    kyverno.auto.generate.automation.access: "true"
+    site: {{ site }}
+    team: {{ team }}
+    project: {{ project }}
+    application: {{ app }}
+    request_number: {{ request_number }}

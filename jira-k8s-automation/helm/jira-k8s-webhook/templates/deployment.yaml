@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    version: {{ .Chart.AppVersion }}
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+
+    spec:
+
+      # -------------------------
+      # Pod Security Context
+      # -------------------------
+      {{- with .Values.securityContext.pod }}
+      securityContext:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+
+      serviceAccountName: {{ .Release.Name }}
+
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - containerPort: 5000
+
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secret
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          # -------------------------
+          # Container Security Context
+          # -------------------------
+          securityContext:
+            {{- with .Values.securityContext.container }}
+            allowPrivilegeEscalation: {{ .allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+{{ toYaml .dropCapabilities | nindent 16 }}
+            {{- end }}
+
+
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+{{ toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+{{ toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}

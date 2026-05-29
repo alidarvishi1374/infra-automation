@@ -1,0 +1,73 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pkl
+*.log
+
+# virtualenv
+venv/
+env/
+ENV/
+.venv/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Docker
+# =========================
+*.tar
+*.tar.gz
+docker-compose.override.yml
+
+
+# ignore packaged charts (very important)
+*.tgz
+
+# =========================
+# Kubernetes / secrets
+# =========================
+kubeconfig
+*.kubeconfig
+*.kube/config
+
+# local secrets
+*.secret
+secrets.yaml
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# CI/CD
+# =========================
+.gitlab-ci.local.yml
+
+# =========================
+# Python wheels (VERY IMPORTANT for you)
+# =========================
+wheels/
+*.whl

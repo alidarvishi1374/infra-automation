@@ -1,0 +1,7 @@
+helm/
+README.md
+Dockerfile
+.git
+.gitignore
+.gitlab-ci.yml
+.dockerignore

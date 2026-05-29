@@ -1,0 +1,78 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+
+metadata:
+  name: jira-k8s-automation-project
+  namespace: argocd
+
+spec:
+  # ----------------------------------------------------
+  # Project description
+  # ----------------------------------------------------
+  description: "Project for jira-k8s-automation Helm deployment"
+
+  # ----------------------------------------------------
+  # Git / Helm sources allowed for this project
+  # ----------------------------------------------------
+  sourceRepos:
+    - "http://192.168.0.130/automation/jira-k8s-automation.git"
+    - "harbor.local/helm-charts"
+
+  # ----------------------------------------------------
+  # Where applications are allowed to deploy
+  # ----------------------------------------------------
+  destinations:
+    - namespace: jira-k8s-webhook
+      server: https://kubernetes.default.svc
+
+  # ----------------------------------------------------
+  # Cluster-scoped resources (DANGEROUS zone)
+  # Only explicitly allowed cluster-level RBAC resources
+  # ----------------------------------------------------
+  clusterResourceWhitelist:
+    # Allow ClusterRole (cluster-wide RBAC rules)
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+
+    # Allow ClusterRoleBinding (bind cluster roles to users/serviceaccounts)
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+
+  # ----------------------------------------------------
+  # Namespace-scoped resources allowed in this project
+  # ----------------------------------------------------
+  namespaceResourceWhitelist:
+
+    # Workloads
+    - group: apps
+      kind: Deployment
+
+    # Core Kubernetes resources
+    - group: ""
+      kind: ConfigMap
+
+    - group: ""
+      kind: Secret
+
+    - group: ""
+      kind: Service
+
+    - group: ""
+      kind: Pod
+
+    - group: apps
+      kind: ReplicaSet
+
+    - group: ""
+      kind: ServiceAccount
+
+    # Networking
+    - group: networking.k8s.io
+      kind: Ingress
+
+    # RBAC (namespace level)
+    - group: rbac.authorization.k8s.io
+      kind: Role
+
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

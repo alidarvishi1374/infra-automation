@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    version: {{ .Chart.AppVersion }}
+data:
+  JIRA_URL: {{ .Values.jiraUrl | quote }}
+  KUBECTL_CLIENT_ADDRESS: {{ .Values.kubectlClientAddress | quote }}
+  KUBECONFIG_PATH: {{ .Values.kubeconfigPath | default ".kube/config" | quote }}
+  TEAM_PREFIXES: |
+    {{- toJson .Values.teamPrefixes | nindent 4 }}
+  JIRA_FIELDS: |
+    {{- toJson .Values.jiraFields | nindent 4 }}

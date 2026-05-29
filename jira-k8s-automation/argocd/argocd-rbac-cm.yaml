@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.csv: |
+    # projects access (IMPORTANT FIX)
+    p, gitlab-ci, projects, get, application-project, allow
+    p, gitlab-ci, projects, get, jira-k8s-automation-project, allow
+
+    # application-project
+    p, gitlab-ci, applications, get, application-project/*, allow
+    p, gitlab-ci, applications, sync, application-project/*, allow
+    p, gitlab-ci, applications, action/*, application-project/*, allow
+
+    # jira project
+    p, gitlab-ci, applications, get, jira-k8s-automation-project/*, allow
+    p, gitlab-ci, applications, sync, jira-k8s-automation-project/*, allow
+    p, gitlab-ci, applications, action/*, jira-k8s-automation-project/*, allow
