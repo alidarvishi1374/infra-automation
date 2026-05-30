@@ -1,5 +1,7 @@
 import time
 
+from services.exceptions import KubernetesError
+
 from flask import (
     Flask,
     request,
@@ -301,9 +303,9 @@ def jira_webhook():
                 f"{namespace}"
             )
 
-            raise Exception(
-                f"Namespace '{namespace}' "
-                f"already exists"
+            raise KubernetesError(
+                f"Namespace '{namespace}' already exists",
+                error_type="AlreadyExists"
             )
 
         except ApiException as e:
@@ -491,7 +493,12 @@ def jira_webhook():
 
         error_message = str(e)
 
-        error_type = type(e).__name__
+        if isinstance(e, KubernetesError):
+            error_type = e.error_type
+        elif isinstance(e, ApiException):
+            error_type = f"ApiException_{e.status}"
+        else:
+            error_type = type(e).__name__
 
         # --------------------------------
         # Failure Metrics

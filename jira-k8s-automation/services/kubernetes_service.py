@@ -4,6 +4,7 @@ import logging
 from kubernetes import client, config
 
 from kubernetes.client.rest import ApiException
+from services.exceptions import KubernetesError
 
 from config import KUBECONFIG_PATH
 
@@ -95,30 +96,38 @@ def apply_namespace_manifest(
 
 def create_namespace(body: dict):
 
-    metadata = body.get(
-        "metadata",
-        {}
-    )
-
+    metadata = body.get("metadata", {})
     name = metadata.get("name")
 
     try:
-
         core_api.read_namespace(name)
 
-        raise Exception(
-            f"Namespace '{name}' already exists"
+        raise KubernetesError(
+            message=f"Namespace '{namespace}' already exists",
+            error_type="AlreadyExists"
         )
 
     except ApiException as e:
 
-        if e.status != 404:
-            raise
+        if e.status == 404:
+            pass
+        else:
+            raise KubernetesError(
+                f"Kubernetes API error: {str(e)}",
+                error_type=f"ApiException_{e.status}"
+            )
 
-    core_api.create_namespace(
-        body=body
-    )
+    except Exception as e:
+        raise KubernetesError(
+            str(e),
+            error_type=type(e).__name__
+        )
 
-    logger.info(
-        f"Namespace created: {name}"
-    )
+    try:
+        core_api.create_namespace(body=body)
+
+    except ApiException as e:
+        raise KubernetesError(
+            str(e),
+            error_type=f"CreateFailed_{e.status}"
+        )
