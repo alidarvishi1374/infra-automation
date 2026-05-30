@@ -4,12 +4,13 @@ namespace: "jira-k8s-webhook"
 
 image:
   repository: harbor.local/automation/jira-k8s-automation
-  tag: main-c0691004
+  tag: main-d0704ad6
   pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
   port: 5000
+  portName: http
 
 ingress:
   enabled: false
@@ -55,6 +56,12 @@ securityContext:
     readOnlyRootFilesystem: true
     dropCapabilities:
       - ALL
+
+serviceMonitor:
+  enabled: true
+  namespace: kube-prometheus-stack
+  interval: 15s
+  path: /metrics
 
 jiraUrl: "http://192.168.0.130:8091"
 kubectlClientAddress: "192.168.112.113"

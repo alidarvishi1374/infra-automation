@@ -24,6 +24,8 @@ spec:
   destinations:
     - namespace: jira-k8s-webhook
       server: https://kubernetes.default.svc
+    - namespace: kube-prometheus-stack
+      server: https://kubernetes.default.svc
 
   # ----------------------------------------------------
   # Cluster-scoped resources (DANGEROUS zone)
@@ -76,3 +78,6 @@ spec:
 
     - group: rbac.authorization.k8s.io
       kind: RoleBinding
+
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
