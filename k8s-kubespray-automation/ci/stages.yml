@@ -1,0 +1,9 @@
+stages:
+  - check
+  - install
+  - reset
+  - upgrade
+  - label
+  - taint
+  - install_argocd
+  - upgrade_cilium

@@ -1,0 +1,11 @@
+- name: Find manifests
+  find:
+    paths: "{{ kube_config_dir }}/{{ item.name }}/manifests"
+    patterns: "*.yml"
+  register: release_manifests
+
+- name: Apply manifests
+  command: kubectl apply -f {{ manifest.path }}
+  loop: "{{ release_manifests.files }}"
+  loop_control:
+    loop_var: manifest

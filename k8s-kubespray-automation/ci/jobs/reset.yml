@@ -1,0 +1,22 @@
+reset_k8s:
+  stage: reset
+  
+  needs:
+    - ping_of_hosts
+
+  extends:
+    - .default_ansible_job
+
+  rules:
+    - changes:
+        - ci/jobs/reset.yml
+      when: manual
+  variables:
+    RESET_CODE_INPUT: ""
+    CONFIRMATION_INPUT: "$RESET_CODE_INPUT"
+    CONFIRMATION_SECRET: "$SECRET_RESET_CODE"
+
+  script:
+    - !reference [.confirmation_check, script]
+    - !reference [.kubespray_common_steps, script]
+    - ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/reset.yml --extra-vars "reset_confirmation=true" --vault-password-file .vault_pass

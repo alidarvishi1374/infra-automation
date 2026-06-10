@@ -1,0 +1,41 @@
+- name: Copy full release directory
+  copy:
+    src: "{{ item.name }}/"
+    dest: "{{ kube_config_dir }}/{{ item.name }}/"
+  loop: "{{ releases }}"
+
+- name: Ensure helm registry config directory exists
+  file:
+    path: "/root/.config/helm/registry"
+    state: directory
+    mode: "0700"
+  when: inventory_hostname == groups['kube_control_plane'][0]
+
+- name: Create Helm OCI registry config
+  copy:
+    dest: "/root/.config/helm/registry/config.json"
+    mode: "0600"
+    content: |
+      {
+        "auths": {
+          "{{ private_helm_repo }}": {
+            "auth": "{{ (private_helm_username + ':' + private_helm_password) | b64encode }}"
+          }
+        }
+      }
+  when: inventory_hostname == groups['kube_control_plane'][0]
+
+- name: Install/Upgrade OCI Helm releases
+  kubernetes.core.helm:
+    name: "{{ item.name }}"
+    chart_ref: "{{ item.chart_ref }}"
+    chart_version: "{{ item.chart_version | default(omit) }}"
+    release_namespace: "{{ item.namespace }}"
+    force: True
+    values_files:
+      - "{{ kube_config_dir }}/{{ item.name }}/helm/values.yml"
+    wait: "{{ item.wait | default(release_common_opts.wait | default(true)) }}"
+    atomic: "{{ item.atomic | default(release_common_opts.atomic | default(true)) }}"
+    wait_timeout: "{{ item.wait_timeout | default(release_common_opts.wait_timeout | default('5m')) }}"
+    create_namespace: "{{ release_common_opts.create_namespace | default(true) }}"
+  loop: "{{ releases }}"

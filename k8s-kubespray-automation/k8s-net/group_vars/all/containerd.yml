@@ -45,17 +45,17 @@
 
 # Registries defined within containerd.
 containerd_registries_mirrors:
- - prefix: 192.168.0.130:8081
+ - prefix: harbor.local
    mirrors:
-    - host: http://192.168.0.130:8081
+    - host: https://harbor.local
       capabilities: ["pull", "resolve"]
-      skip_verify: true
-        #      header:
-        #        Authorization: "Basic XXX"
+      skip_verify: false
+      header:
+        Authorization: "{{ containerd_registry_auth }}"
 
 # containerd_max_container_log_line_size: 16384
 
-containerd_registry_auth:
-  - registry: 192.168.0.130:8081
-    username: admin
-    password: admin123
+# containerd_registry_auth:
+#   - registry: harbor.local
+#     username: admin
+#     password: admin123

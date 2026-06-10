@@ -1,0 +1,23 @@
+label_node:
+  stage: label
+  needs:
+    - ping_of_hosts
+  extends:
+    - .default_ansible_job
+
+  rules:
+    - changes:
+        - ci/jobs/label.yml
+        - k8s-net/group_vars/*_labels.yml
+        - k8s-net/inventory.ini
+      when: manual
+
+  variables:
+    LABEL_CODE_INPUT: ""
+    CONFIRMATION_INPUT: "$LABEL_CODE_INPUT"
+    CONFIRMATION_SECRET: "$SECRET_LABEL_CODE"
+
+  script:
+    - !reference [.confirmation_check, script]
+    - !reference [.kubespray_common_steps, script]
+    - ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/cluster.yml --tags=node-label --vault-password-file .vault_pass

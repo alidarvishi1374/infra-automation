@@ -1,0 +1,14 @@
+---
+- hosts: kube_control_plane[0]
+  gather_facts: no
+  roles:
+    - name: custom-helm-apps
+      releases:
+        - name: argocd
+          namespace: argocd
+          chart_ref: oci://harbor.local/helm-charts/argo-cd
+          chart_version: "9.5.19"
+      release_common_opts:
+        wait_timeout: "5m"
+        atomic: true
+        create_namespace: true

@@ -1,0 +1,29 @@
+upgrade_k8s:
+  stage: upgrade
+
+  extends:
+    - .default_ansible_job
+
+  needs:
+    - ping_of_hosts
+
+  rules:
+    - changes:
+        - ci/jobs/upgrade.yml
+        - k8s-net/group_vars/all/**/*
+        - k8s-net/group_vars/k8s_cluster/**/*
+        - k8s-net/inventory.ini
+        - roles/etcd/**/*
+        - network_plugin/cilium/**/*
+      when: manual
+
+  variables:
+    UPGRADE_CODE_INPUT: ""
+    CONFIRMATION_INPUT: "$UPGRADE_CODE_INPUT"
+    CONFIRMATION_SECRET: "$SECRET_UPGRADE_CODE"
+
+  script:
+    - !reference [.confirmation_check, script]
+    - !reference [.kubespray_common_steps, script]
+    - ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa extra_playbooks/harbor_ca.yml --vault-password-file .vault_pass
+    - ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/upgrade_cluster.yml --vault-password-file .vault_pass

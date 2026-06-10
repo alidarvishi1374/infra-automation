@@ -1,0 +1,9 @@
+ping_of_hosts:
+  stage: check
+
+  extends:
+    - .default_ansible_job
+
+  script:
+    - !reference [.kubespray_common_steps, script]
+    - ansible all -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa -m ping --vault-password-file /kubespray/.vault_pass

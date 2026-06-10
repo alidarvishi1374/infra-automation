@@ -1,0 +1,24 @@
+taint_node:
+  stage: taint
+  needs:
+    - ping_of_hosts
+
+  extends:
+    - .default_ansible_job
+
+  rules:
+    - changes:
+        - ci/jobs/taint.yml
+        - k8s-net/group_vars/*_taints.yml
+        - k8s-net/inventory.ini
+      when: manual
+
+  variables:
+    TAINT_CODE_INPUT: ""
+    CONFIRMATION_INPUT: "$TAINT_CODE_INPUT"
+    CONFIRMATION_SECRET: "$SECRET_TAINT_CODE"
+
+  script:
+    - !reference [.confirmation_check, script]
+    - !reference [.kubespray_common_steps, script]
+    - ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa playbooks/cluster.yml --tags=node-taint --vault-password-file .vault_pass

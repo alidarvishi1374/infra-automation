@@ -1,0 +1,2 @@
+harbor_ca_cert_file: harbor-ca.crt
+harbor_ca_dest_name: harbor-ca.crt

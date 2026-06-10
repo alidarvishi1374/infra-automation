@@ -1,0 +1,39 @@
+.default_ansible_job:
+  image:
+    name: harbor.local/kubespray/kubespray:v2.31.0
+    pull_policy: if-not-present
+
+  variables:
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+
+  tags:
+    - kubespray
+
+  before_script:
+    - mkdir -p /home/root/.ssh
+    - cp /builds/kubespray/k8s-automation.tmp/id_rsa /home/root/.ssh/id_rsa
+    - chmod 600 /home/root/.ssh/id_rsa
+    - echo "$VAULT_PASS" > /kubespray/.vault_pass
+    - chmod 600 /kubespray/.vault_pass
+
+.kubespray_common_steps:
+  script:
+    - cp -r roles/custom-helm-apps /kubespray/roles
+    - cp -r custom-files/ /kubespray/roles/custom-helm-apps/files/
+    - cp -r k8s-net /inventory
+    - cp -r roles/harbor_ca /kubespray/roles/
+    - cp extra_playbooks/* /kubespray/extra_playbooks
+    - cp roles/etcd/tasks/gen_nodes_certs_script.yml /kubespray/roles/etcd/tasks/
+    - cp roles/etcd/tasks/upd_ca_trust.yml /kubespray/roles/etcd/tasks/
+    - cp roles/etcd/tasks/main.yml /kubespray/roles/etcd/tasks/
+    - cp roles/network_plugin/cilium/tasks/apply.yml /kubespray/roles/network_plugin/cilium/tasks/
+    - cp roles/network_plugin/cilium/templates/values.yaml.j2 /kubespray/roles/network_plugin/cilium/templates/
+    - cd /kubespray
+
+.confirmation_check:
+  script:
+    - |
+      if [ "$CONFIRMATION_INPUT" != "$CONFIRMATION_SECRET" ]; then
+        echo "❌ Invalid confirmation code"
+        exit 1
+      fi

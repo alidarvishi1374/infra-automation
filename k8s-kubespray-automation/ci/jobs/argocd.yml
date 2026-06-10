@@ -1,0 +1,33 @@
+install_argocd:
+  stage: install_argocd
+
+  extends:
+    - .default_ansible_job
+
+  needs:
+    - ping_of_hosts
+
+  rules:
+    - changes:
+        - ci/jobs/argocd.yml
+        - custom-files/**/*
+        - extra_playbooks/**/*
+        - roles/custom-helm-apps/**/*
+      when: manual
+
+  variables:
+    ARGOCD_CODE_INPUT: ""
+    CONFIRMATION_INPUT: "$ARGOCD_CODE_INPUT"
+    CONFIRMATION_SECRET: "$SECRET_ARGOCD_CODE"
+
+  script:
+    - export ARGOCD_GITLAB_USERNAME_B64=$(printf "%s" "$ARGOCD_GITLAB_USERNAME" | base64 -w0)
+    - export ARGOCD_GITLAB_PASSWORD_B64=$(printf "%s" "$ARGOCD_GITLAB_PASSWORD" | base64 -w0) 
+    - |
+      sed -i \
+        -e "s|\${ARGOCD_GITLAB_USERNAME_B64}|$ARGOCD_GITLAB_USERNAME_B64|g" \
+        -e "s|\${ARGOCD_GITLAB_PASSWORD_B64}|$ARGOCD_GITLAB_PASSWORD_B64|g" \
+        custom-files/argocd/manifests/argocd-application.yml
+    - !reference [.confirmation_check, script]
+    - !reference [.kubespray_common_steps, script]
+    - ansible-playbook -i /inventory/inventory.ini --private-key /home/root/.ssh/id_rsa extra_playbooks/custom_helm_apps.yml --vault-password-file .vault_pass

@@ -1,0 +1,7 @@
+---
+- name: Install Apps
+  include_tasks: helm-install-upgrade.yml
+
+- name: Process release manifests
+  include_tasks: apply-manifests.yml
+  loop: "{{ releases }}"

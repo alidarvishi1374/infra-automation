@@ -11,9 +11,9 @@ bin_dir: /usr/local/bin
 
 
 ## External LB example config
-apiserver_loadbalancer_domain_name: "192.168.0.146"
+apiserver_loadbalancer_domain_name: "192.168.0.131"
 loadbalancer_apiserver:
-  address: 192.168.0.146
+  address: 192.168.0.131
   port: 6443
 
 ## Internal loadbalancers for apiservers
@@ -142,3 +142,10 @@ unsafe_show_logs: true
 allow_unsupported_distribution_setup: false
 
 pkg_install_retries: 10
+
+private_helm_repo: "harbor.local"
+
+# download_run_once: false
+# download_force_cache: true
+# download_compress: 1
+# skip_downloads: false

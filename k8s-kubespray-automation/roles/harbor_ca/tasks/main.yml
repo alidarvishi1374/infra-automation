@@ -1,0 +1,35 @@
+---
+- name: Harbor CA | set paths per OS
+  set_fact:
+    harbor_ca_paths:
+      Debian: /usr/local/share/ca-certificates
+      RedHat: /etc/pki/ca-trust/source/anchors
+      Suse: /etc/pki/trust/anchors
+
+- name: Harbor CA | copy CA cert
+  copy:
+    src: "{{ harbor_ca_cert_file | default('harbor-ca.crt') }}"
+    dest: "{{ harbor_ca_paths[ansible_os_family] }}/{{ harbor_ca_dest_name | default('harbor-ca.crt') }}"
+    mode: "0644"
+  register: harbor_ca_copy
+
+# Debian / Ubuntu
+- name: Harbor CA | update CA (Debian)
+  command: update-ca-certificates
+  when:
+    - harbor_ca_copy.changed
+    - ansible_os_family == "Debian"
+
+# RedHat family
+- name: Harbor CA | update CA (RedHat)
+  command: update-ca-trust extract
+  when:
+    - harbor_ca_copy.changed
+    - ansible_os_family == "RedHat"
+
+# SUSE
+- name: Harbor CA | update CA (Suse)
+  command: update-ca-certificates
+  when:
+    - harbor_ca_copy.changed
+    - ansible_os_family == "Suse"
