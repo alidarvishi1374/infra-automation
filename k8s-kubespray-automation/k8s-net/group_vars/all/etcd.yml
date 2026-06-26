@@ -14,3 +14,5 @@ etcd_data_dir: /var/lib/etcd
 ## Settings for etcd deployment type
 # Set this to docker if you are using container_manager: docker
 etcd_deployment_type: host
+
+etcd_listen_metrics_urls: "http://0.0.0.0:2381"
