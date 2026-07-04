@@ -48,6 +48,46 @@ spec:
       kind: AppProject
 ---
 apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: sre
+  namespace: argocd
+spec:
+  description: SRE Team
+
+  sourceRepos:
+    - http://192.168.0.130/sre/*
+    - http://<repos>/helm-charts*
+
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "sre-*"
+
+  clusterResourceWhitelist: 
+    - group: ""
+      kind: Namespace
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: admin
+      description: SRE Team Admin
+
+      groups:
+        - sre
+
+      policies:
+        - p, proj:sre:admin, applications, get, sre/*, allow
+        - p, proj:sre:admin, applications, create, sre/*, allow
+        - p, proj:sre:admin, applications, update, sre/*, allow
+        - p, proj:sre:admin, applications, sync, sre/*, allow
+        - p, proj:sre:admin, applications, override, sre/*, allow
+        - p, proj:sre:admin, logs, get, sre/*, allow
+        - p, proj:sre:admin, exec, create, sre/*, allow
+---
+apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd-applications

@@ -107,6 +107,9 @@ global:
     - ip: 192.168.0.130
       hostnames:
       - harbor.local
+    - ip: 192.168.0.125
+      hostnames:
+      - sso.local01.ans
 
   # Configure dual-stack used by all component services
   dualStack:
@@ -205,7 +208,7 @@ configs:
 
     # -- Enable exec feature in Argo UI
     ## Ref: https://argo-cd.readthedocs.io/en/latest/operator-manual/rbac/#exec-resource
-    exec.enabled: false
+    exec.enabled: true
 
     # -- Enable local admin user
     ## Ref: https://argo-cd.readthedocs.io/en/latest/faq/#how-to-disable-admin-user
@@ -238,25 +241,42 @@ configs:
     #         - name: your-github-org
 
     # OIDC configuration as an alternative to dex (optional).
-    # oidc.config: |
-    #   name: AzureAD
-    #   issuer: https://login.microsoftonline.com/TENANT_ID/v2.0
-    #   clientID: aaaabbbbccccddddeee
-    #   clientSecret: $oidc.azuread.clientSecret
-    #   # Optional: set to true to use Azure Workload Identity instead of clientSecret
-    #   azure:
-    #     useWorkloadIdentity: false
+    oidc.config: |
+      name: SSO
+      issuer: https://sso.local01.ans/realms/myrealm
+      clientID: argocd
+      clientSecret: $oidc.keycloak.clientSecret
+      refreshTokenThreshold: 2m
+      requestedScopes: ["openid", "profile", "email", "groups"]
 
-    # Some OIDC providers require a separate clientID for different callback URLs.
-    # For example, if configuring Argo CD with self-hosted Dex, you will need a separate client ID
-    # for the 'localhost' (CLI) client to Dex. This field is optional. If omitted, the CLI will
-    # use the same clientID as the Argo CD server
-    #   cliClientID: vvvvwwwwxxxxyyyyzzzz
 
-    #   rootCA: |
-    #     -----BEGIN CERTIFICATE-----
-    #     ... encoded certificate data here ...
-    #     -----END CERTIFICATE-----
+      # Some OIDC providers require a separate clientID for different callback URLs.
+      # For example, if configuring Argo CD with self-hosted Dex, you will need a separate client ID
+      # for the 'localhost' (CLI) client to Dex. This field is optional. If omitted, the CLI will
+      # use the same clientID as the Argo CD server
+      #   cliClientID: vvvvwwwwxxxxyyyyzzzz
+
+      rootCA: |
+        -----BEGIN CERTIFICATE-----
+        MIIDNTCCAh2gAwIBAgIUfTqDstOGSODHtVr7m8Q5Mj//ejAwDQYJKoZIhvcNAQEL
+        BQAwFjEUMBIGA1UEAxMLbG9jYWwwMS5hbnMwHhcNMjYwNjI1MTUzODQ2WhcNMzYw
+        NjIyMTUzOTE2WjAWMRQwEgYDVQQDEwtsb2NhbDAxLmFuczCCASIwDQYJKoZIhvcN
+        AQEBBQADggEPADCCAQoCggEBAMjEHCrc/h3bKzT5+RiKfwAnHts0b8nWQbAyvvVk
+        F6DXC2o/urQ++Jlo2HN23ofZlQShfQUAszEEnT0LRN4Cz/JBjaYgcv5wisaNKqpt
+        ins8oMDLbIH/3OGoxmTF+x6Y6bERSBm8Qb3z78Apl5vwBleOe5KUHkMrD9ASrxwt
+        aPwVbc9XB9j2yW1UnO5jUQCxftEy4QtylTk6gq1W04MDYBeVMajr9QtDHQkH17Jy
+        CM+G1rmFNvQ8sH/flsee3ySVdJWfebcm53VbQ6/NHurbxJcXNHjK5mGxSTlqzh+x
+        s/bMdQDnEwftz6+BJn4pQbOJexE6DExLH2OPZ4JKhdFmlrkCAwEAAaN7MHkwDgYD
+        VR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFP1ViPbVz9oH
+        j1s3WWzAtGpF11sBMB8GA1UdIwQYMBaAFP1ViPbVz9oHj1s3WWzAtGpF11sBMBYG
+        A1UdEQQPMA2CC2xvY2FsMDEuYW5zMA0GCSqGSIb3DQEBCwUAA4IBAQBj1rsuM8Zx
+        fXhOVR/JIjom6O7T+s9o6Or6yN1qi1vG+n0GoFdc02ZYXwYb5eoP/3o3eDMtncZj
+        tMAqFD3MwT9bXkU7yOBdCWWqp0K/rxMyBqh2aKxZ9p/96IhAWX65FmKbLnIvcDWf
+        vyFHbr1Cl1d5hr0t74lVjvogmmNaYIkOpGXlVAlyGgCQdoqFBT+padBYii70sEu6
+        JTcKcWW1px8SBK83piefel7iQwojG1bGGIK2I0nHMsSmsuqmu5WmPsM0s1mUBVbG
+        RsnqCHbEIp30jON+m6xSLGOw7GBj5bsNLSiDBirLYQ9/lTBCFBMQW3sRdA+/ngBO
+        vxJdhjpyeG3M
+        -----END CERTIFICATE-----
 
     # Optional list of allowed aud claims. If omitted or empty, defaults to the clientID value above (and the
     # cliClientID, if that is also specified). If you specify a list and want the clientID to be allowed, you must
@@ -707,8 +727,8 @@ configs:
     ## Custom secrets. Useful for injecting SSO secrets into environment variables.
     ## Ref: https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/#sensitive-data-and-sso-client-secrets
     ## Note that all values must be non-empty.
-    extra: {}
-      # LDAP_PASSWORD: "mypassword"
+    extra: 
+      oidc.keycloak.clientSecret: "<client secret from keycloak>"
 
     # -- Bcrypt hashed admin password
     ## Argo expects the password in the secret to be bcrypt hashed. You can create this hash with
