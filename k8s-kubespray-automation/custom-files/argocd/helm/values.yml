@@ -43,7 +43,7 @@ crds:
 global:
   # -- Default domain used by all components
   ## Used for ingresses, certificates, SSO, notifications, etc.
-  domain: argocd.example.com
+  domain: argocd.local01.ans
 
   # -- Runtime class name for all components
   runtimeClassName: ""
